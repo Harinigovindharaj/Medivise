@@ -1,0 +1,132 @@
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# ENV FILES (IMPORTANT)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# NODE / BACKEND (Express)
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# =========================
+# ANGULAR (FRONTEND)
+# =========================
+.angular/
+.cache/
+coverage/
+dist/
+tmp/
+
+# Angular environment files (if sensitive)
+src/environments/environment*.ts
+
+# =========================
+# PYTHON / ML
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# =========================
+# ML MODELS & DATA (CRITICAL)
+# =========================
+*.h5
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.sav
+
+# Large datasets
+*.csv
+*.xlsx
+*.json
+
+# Allow small sample data if needed
+!data/dataset.csv
+
+# =========================
+# DATABASE
+# =========================
+*.db
+*.sqlite3
+
+# MongoDB local dump
+dump/
+*.bson
+*.metadata.json
+
+# =========================
+# FILE UPLOADS (YOUR PROJECT)
+# =========================
+uploads/
+uploaded_prescriptions/
+temp/
+tmp/
+
+# Generated outputs
+generated_reports/
+model_outputs/
+
+# =========================
+# SECURITY / KEYS
+# =========================
+*.pem
+*.key
+*.crt
+
+# =========================
+# IDE / EDITOR
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# TESTING
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# DOCKER (if used)
+# =========================
+.dockerignore
+
+# =========================
+# MISC
+# =========================
+*.tgz
+*.zip
+*.tar
+*.gz
