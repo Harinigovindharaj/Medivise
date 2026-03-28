@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="riskApp">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Advanced Risk Analysis And Recommendations</title>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #6366f1; --success: #2dd4bf; --danger: #f43f5e; --warning: #fbbf24;
+            --glass: rgba(15, 23, 42, 0.95);
+        }
+
+        body {
+            margin: 0; font-family: 'Inter', sans-serif;
+            background: linear-gradient(rgba(15,23,42,0.9), rgba(15,23,42,0.9)), url('E:/medivise/assets/img/pills.jpg');
+            background-size: cover; background-attachment: fixed; color: white;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(0, 0, 0, 0.5); padding: 15px 50px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+        }
+        
+        .nav-btn {
+            background: #1e293b; border: 1px solid #334155; color: white;
+            padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: 0.3s;
+        }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 20px; }
+        
+        .glass-card { 
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 25px; padding: 40px; backdrop-filter: blur(20px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            min-height: 400px;
+        }
+
+        .step-bar { display: flex; gap: 10px; margin-bottom: 30px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 15px; }
+        .step-link { flex: 1; text-align: center; padding: 12px; border-radius: 10px; opacity: 0.4; transition: 0.4s; font-size: 0.9rem; }
+        .step-link.active { opacity: 1; background: var(--primary); font-weight: bold; transform: scale(1.02); }
+
+        .risk-score { font-size: 4rem; font-weight: 900; color: var(--danger); text-shadow: 0 0 20px rgba(244, 63, 94, 0.4); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; padding: 15px; border-bottom: 2px solid rgba(255,255,255,0.1); opacity: 0.6; }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .alt-row:hover { background: rgba(99, 102, 241, 0.1); cursor: pointer; }
+        .selected-drug { background: rgba(45, 212, 191, 0.15) !important; border-left: 4px solid var(--success); }
+
+        .footer-nav { 
+            margin-top: 40px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); 
+            display: flex; justify-content: space-between; 
+        }
+        .btn { border: none; padding: 14px 28px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+
+        /* Loader Animation */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin: 20% auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body ng-controller="RiskCtrl">
+
+    <nav class="navbar">
+        <h2 style="margin:0; color: var(--primary);">MediVise <span style="font-weight: 200; color: white;">Risk Analysis And Recommendations</span></h2>
+        <button class="nav-btn" ng-click="navToDashboard()">Back to Dashboard</button>
+    </nav>
+
+    <div class="container">
+        <div class="step-bar">
+            <div class="step-link" ng-class="{active: currentTab == 'risk'}">1. Risk Profile</div>
+            <div class="step-link" ng-class="{active: currentTab == 'recom'}">2. AI Alternatives</div>
+            <div class="step-link" ng-class="{active: currentTab == 'report'}">3. Clinical Report</div>
+        </div>
+
+        <div class="glass-card fade-in">
+            
+            <div ng-if="loading">
+                <div class="loader"></div>
+                <p style="text-align:center; opacity:0.6">Crunching clinical data...</p>
+            </div>
+
+            <div ng-if="!loading && currentTab == 'risk'" class="fade-in">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="margin:0">Interaction Risk Score</h2>
+                        <p style="opacity: 0.6;">Biochemical conflict probability: <b style="color:var(--danger)">High</b></p>
+                    </div>
+                    <div class="risk-score">{{ analytics.score }}%</div>
+                </div>
+
+                <div style="margin: 30px 0; height: 260px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                    <canvas id="riskTrendChart"></canvas>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                    <div style="padding:15px; border-radius:12px; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3);">
+                        <small style="opacity:0.6">Severity</small><br><b>{{ analytics.severity }}</b>
+                    </div>
+                    <div style="padding:15px; border-radius:12px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                        <small style="opacity:0.6">Category</small><br><b>{{ analytics.category }}</b>
+                    </div>
+                    <div style="padding:15px; border-radius:12px; background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.3);">
+                        <small style="opacity:0.6">Reliability</small><br><b>{{ analytics.reliability }}%</b>
+                    </div>
+                </div>
+            </div>
+
+            <div ng-if="!loading && currentTab == 'recom'" class="fade-in">
+                <h2>Suggested Adjustments</h2>
+                <p style="opacity: 0.6;">Clinical alternatives to minimize risks detected in backend.</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Current</th><th>AI Alternative</th><th>Clinical Benefit</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr class="alt-row" ng-repeat="alt in alternatives" ng-click="selectDrug($index)" ng-class="{'selected-drug': alt.selected}">
+                            <td>{{alt.original}}</td>
+                            <td style="color:var(--success)"><b>{{alt.suggested}}</b></td>
+                            <td><small>{{alt.reason}}</small></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div ng-if="!loading && currentTab == 'report'" class="fade-in">
+                <div style="text-align:center; padding: 10px;">
+                    <span style="font-size: 40px;"></span>
+                    <h2>Final Assessment</h2>
+                </div>
+
+                <div style="background: white; color: #1e293b; padding: 30px; border-radius: 15px; margin: 20px 0; border-left: 8px solid var(--primary);">
+                    <h4 style="margin-top:0; text-transform: uppercase; color: #64748b;">Clinical Summary</h4>
+                    <p>Analysis of interactions indicates a <b>{{ analytics.score }}%</b> probability of severe adverse events. Suggested switch to <b>{{ (alternatives | filter:{selected: true})[0].suggested }}</b> is recommended.</p>
+                    <hr style="opacity:0.1; margin: 20px 0;">
+                    <div style="display:flex; justify-content: space-between; font-size: 0.85rem;">
+                        <span>ID: #MV-2026-X</span>
+                        <span>Date: 2026-03-28</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap: 10px; justify-content: center;">
+                    <button class="btn btn-primary" ng-click="downloadReport()"> Save PDF</button>
+                    <button class="btn btn-outline" ng-click="emailReport()"> Email Doctor</button>
+                </div>
+            </div>
+
+            <div class="footer-nav" ng-if="!loading">
+                <button class="btn btn-outline" ng-click="prevStep()" ng-show="currentTab != 'risk'">
+                    ← Previous Step
+                </button>
+                <div ng-show="currentTab == 'risk'"></div> 
+                <button class="btn btn-primary" ng-click="nextStep()" ng-show="currentTab != 'report'">
+                    Next: {{ currentTab == 'risk' ? 'Recommendations' : 'Final Report' }} →
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const app = angular.module('riskApp', []);
+        app.controller('RiskCtrl', function($scope, $timeout) {
+            
+            $scope.tabs = ['risk', 'recom', 'report'];
+            $scope.currentTab = 'risk';
+            $scope.loading = true; // Start in loading state
+
+            // Placeholder Objects (Empty until backend "responds")
+            $scope.analytics = {};
+            $scope.alternatives = [];
+
+            // SIMULATION: This represents your backend call
+            $scope.fetchBackendData = function() {
+                $scope.loading = true;
+                
+                // Simulate 1.5 second network delay
+                $timeout(function() {
+                    $scope.analytics = {
+                        score: 88,
+                        severity: "Critical",
+                        category: "Synergistic",
+                        reliability: 99.2
+                    };
+                    $scope.alternatives = [
+                        {original: "Warfarin", suggested: "Apixaban", reason: "Lower GI bleeding risk", selected: true},
+                        {original: "Aspirin", suggested: "Clopidogrel", reason: "Reduced gastric erosion", selected: false}
+                    ];
+                    $scope.loading = false;
+                    
+                    // Render chart only after data is ready
+                    $timeout(renderChart, 100);
+                }, 1500);
+            };
+
+            $scope.nextStep = function() {
+                let currentIndex = $scope.tabs.indexOf($scope.currentTab);
+                if (currentIndex < $scope.tabs.length - 1) {
+                    $scope.currentTab = $scope.tabs[currentIndex + 1];
+                    if ($scope.currentTab === 'risk') $timeout(renderChart, 100);
+                }
+            };
+
+            $scope.prevStep = function() {
+                let currentIndex = $scope.tabs.indexOf($scope.currentTab);
+                if (currentIndex > 0) {
+                    $scope.currentTab = $scope.tabs[currentIndex - 1];
+                    if ($scope.currentTab === 'risk') $timeout(renderChart, 100);
+                }
+            };
+
+            $scope.navToDashboard = function() {
+                if(confirm("Exit analysis? Unsaved report data will be cleared.")) {
+                    alert("Redirecting to Dashboard...");
+                }
+            };
+
+            $scope.selectDrug = function(index) {
+                $scope.alternatives.forEach(a => a.selected = false);
+                $scope.alternatives[index].selected = true;
+            };
+
+            function renderChart() {
+                const canvas = document.getElementById('riskTrendChart');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Pre-Dose', 'Absorption', 'Peak', 'Clearance'],
+                        datasets: [{
+                            data: [10, 45, $scope.analytics.score, 65],
+                            borderColor: '#6366f1',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            tension: 0.4,
+                            fill: true,
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)'
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, plugins: { legend: { display: false } },
+                        scales: { y: { display: false }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }
+                    }
+                });
+            }
+
+            // PDF and Email features preserved
+            $scope.downloadReport = function() { alert("Compiled Clinical PDF successfully."); };
+            $scope.emailReport = function() { alert("Report dispatched to provider@hospital.com"); };
+
+            // Initial trigger
+            $scope.fetchBackendData();
+        });
+    </script>
+</body>
+</html>
