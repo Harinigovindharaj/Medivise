@@ -6,6 +6,8 @@ import joblib
 import pandas as pd
 import shap
 import numpy as np
+import json
+from datetime import datetime
 
 
 # =========================
@@ -137,22 +139,13 @@ def explain_prediction(model, input_df, pred_class_index):
     shap_values = explainer(X_transformed)
 
     shap_single = shap_values[0, pred_class_index]
-    base_value = shap_values.base_values[0][pred_class_index]
 
-    # Convert to dense
-    data_row = X_transformed.toarray()[0] if hasattr(X_transformed, "toarray") else X_transformed[0]
+    contributions = [
+        (n, float(v))
+        for n, v in zip(feature_names, shap_single.values)
+        if abs(v) > 1e-6
+    ]
 
-    shap_fixed = shap.Explanation(
-        values=shap_single.values,
-        base_values=base_value,
-        data=data_row,
-        feature_names=feature_names
-    )
-
-    shap.plots.waterfall(shap_fixed)
-
-    # Filter meaningful features
-    contributions = [(n, v) for n, v in zip(feature_names, shap_single.values) if abs(v) > 1e-6]
     contributions = sorted(contributions, key=lambda x: abs(x[1]), reverse=True)
 
     return contributions
