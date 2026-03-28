@@ -62,6 +62,7 @@
     <nav class="navbar">
         <h2 style="margin:0;">MediVise <span style="font-weight:200">Patient</span></h2>
         <button class="nav-link" ng-click="confirmExit()"> Back to Dashboard</button>
+
     </nav>
 
     <div class="container">
@@ -192,22 +193,21 @@
             };
 
             // Navigation: Dashboard Exit
-            $scope.confirmExit = function() {
-                if(confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
-                    alert("Navigating to Dashboard...");
-                    // window.location.href = 'dashboard.html';
-                }
-            };
+           $scope.confirmExit = function() {
+    if(confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
+        // Updated to point to your actual dashboard filename
+        window.location.href = 'patient.html'; 
+    }
+};
 
             // Navigation: GO TO INTERACTION PAGE
-            $scope.goToAnalysis = function() {
-                // Store data so the next page can use it
-                localStorage.setItem('medList', JSON.stringify($scope.medications));
-                
-                alert("Analyzing Interaction Risks...");
-                // Link to your next file
-                window.location.href = 'interaction_analysis.html'; 
-            };
+            // Update the goToAnalysis function in patient_prescription.html
+$scope.goToAnalysis = function() {
+    localStorage.setItem('medList', JSON.stringify($scope.medications));
+    alert("Analyzing Interaction Risks...");
+    // Change 'interaction_analysis.html' to your actual file name:
+    window.location.href = 'patient_Interaction_Analyasis.html'; 
+};
         });
     </script>
 </body>
