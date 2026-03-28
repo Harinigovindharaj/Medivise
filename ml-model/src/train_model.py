@@ -39,6 +39,9 @@ def feature_engineering(df):
     df["total_dosage"] = df["dosage1"] + df["dosage2"]
     df["age_dosage_ratio"] = df["age"] / (df["total_dosage"] + 1)
 
+    df["dosage_ratio"] = df["dosage1"] / (df["dosage2"] + 1)
+    df["same_class"] = (df["drug1_class"] == df["drug2_class"]).astype(int)
+
     return df
 
 
@@ -49,16 +52,18 @@ def build_pipeline(num_cols, cat_cols):
 
     preprocessor = ColumnTransformer([
         ("num", StandardScaler(), num_cols),
-        ("cat", OneHotEncoder(handle_unknown='ignore'), cat_cols)
+        ("cat", OneHotEncoder(handle_unknown='ignore', max_categories=5), cat_cols)
     ])
 
     model = Pipeline([
         ("preprocessing", preprocessor),
         ("classifier", XGBClassifier(
             eval_metric='mlogloss',
-            n_estimators=200,
-            max_depth=5,
-            learning_rate=0.1
+            n_estimators=300,
+            max_depth=6,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8
         ))
     ])
 
@@ -70,7 +75,7 @@ def build_pipeline(num_cols, cat_cols):
 # =========================
 def main():
 
-    df = load_data("../data/dataset.csv")
+    df = load_data("../data/datasetnew.csv")
 
     print("Columns:", df.columns)
 

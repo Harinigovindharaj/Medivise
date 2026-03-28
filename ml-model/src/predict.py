@@ -1,5 +1,5 @@
 # =========================
-# predict.py (FINAL STABLE VERSION)
+# predict.py (FULL SYSTEM + REPORT)
 # =========================
 
 import joblib
@@ -9,7 +9,42 @@ import numpy as np
 
 
 # =========================
-# LOAD MODEL + ENCODER
+# KNOWLEDGE BASES
+# =========================
+
+ALTERNATIVES = {
+    "NSAID": ["paracetamol"],
+    "Anticoagulant": ["heparin"],
+    "Antiplatelet": ["aspirin"],
+    "Statin": ["rosuvastatin"],
+    "Antihypertensive": ["losartan"],
+    "Analgesic": ["acetaminophen"],
+    "Antidiabetic": ["insulin"]
+}
+
+FOOD_INTERACTIONS = {
+    "aspirin": ["alcohol", "spicy food"],
+    "ibuprofen": ["alcohol"],
+    "paracetamol": ["alcohol"],
+    "warfarin": ["leafy greens (vitamin K)", "cranberry juice"],
+    "metformin": ["alcohol"],
+    "amlodipine": ["grapefruit"],
+    "atorvastatin": ["grapefruit"],
+    "clopidogrel": ["alcohol"]
+}
+
+CLASS_FOOD_INTERACTIONS = {
+    "NSAID": ["alcohol"],
+    "Anticoagulant": ["vitamin K rich foods"],
+    "Statin": ["grapefruit"],
+    "Antiplatelet": ["alcohol"],
+    "Antidiabetic": ["high sugar foods"],
+    "Antihypertensive": ["high salt foods"]
+}
+
+
+# =========================
+# LOAD MODEL
 # =========================
 def load_artifacts():
     model = joblib.load("medivise_model.pkl")
@@ -35,17 +70,6 @@ def feature_engineering(df):
 
 
 # =========================
-# PREPARE INPUT
-# =========================
-def prepare_input(data_dict):
-
-    df = pd.DataFrame([data_dict])
-    df = feature_engineering(df)
-
-    return df
-
-
-# =========================
 # PREDICT
 # =========================
 def predict(model, label_encoder, input_df):
@@ -54,8 +78,7 @@ def predict(model, label_encoder, input_df):
     prediction = label_encoder.inverse_transform([pred_encoded])[0]
 
     probs = model.predict_proba(input_df)[0]
-    class_labels = label_encoder.classes_
-    prob_dict = dict(zip(class_labels, probs))
+    prob_dict = dict(zip(label_encoder.classes_, probs))
 
     risk_score = prob_dict.get("high", max(probs))
 
@@ -63,62 +86,62 @@ def predict(model, label_encoder, input_df):
 
 
 # =========================
-# HUMAN-FRIENDLY EXPLANATION
+# ALTERNATIVES
 # =========================
-def generate_human_explanation(feature_contributions):
+def suggest_alternatives(input_data, risk_score):
 
-    explanations = []
+    if risk_score < 0.5:
+        return ["No safer alternative needed"]
 
-    for name, val in feature_contributions[:5]:
+    suggestions = []
 
-        if "dosage" in name and val > 0:
-            explanations.append("Higher dosage is increasing interaction risk")
+    for drug, cls in [(input_data["drug1"], input_data["drug1_class"]),
+                      (input_data["drug2"], input_data["drug2_class"])]:
 
-        elif "drug1_class" in name or "drug2_class" in name:
-            if val > 0:
-                explanations.append("Drug class combination increases interaction severity")
+        if cls in ALTERNATIVES:
+            suggestions.append(f"Replace {drug} with {ALTERNATIVES[cls][0]}")
 
-        elif "drug1_" in name or "drug2_" in name:
-            if val > 0:
-                explanations.append("Specific drug combination contributes to higher risk")
-
-        elif "age" in name:
-            if val > 0:
-                explanations.append("Patient age increases risk slightly")
-            else:
-                explanations.append("Patient age slightly reduces risk")
-
-    return list(set(explanations))
+    return suggestions
 
 
 # =========================
-# SHAP EXPLANATION (FINAL FIXED)
+# FOOD INTERACTIONS
+# =========================
+def check_food_interactions(input_data):
+
+    warnings = set()
+
+    for drug in [input_data["drug1"], input_data["drug2"]]:
+        if drug in FOOD_INTERACTIONS:
+            warnings.update(FOOD_INTERACTIONS[drug])
+
+    for cls in [input_data["drug1_class"], input_data["drug2_class"]]:
+        if cls in CLASS_FOOD_INTERACTIONS:
+            warnings.update(CLASS_FOOD_INTERACTIONS[cls])
+
+    return list(warnings)
+
+
+# =========================
+# SHAP + HUMAN EXPLANATION
 # =========================
 def explain_prediction(model, input_df, pred_class_index):
 
     xgb_model = model.named_steps["classifier"]
     preprocessor = model.named_steps["preprocessing"]
 
-    # Transform input
     X_transformed = preprocessor.transform(input_df)
     feature_names = preprocessor.get_feature_names_out()
 
-    # SHAP
     explainer = shap.Explainer(xgb_model)
     shap_values = explainer(X_transformed)
 
     shap_single = shap_values[0, pred_class_index]
-
-    # Fix base value (multi-class)
     base_value = shap_values.base_values[0][pred_class_index]
 
-    # Convert sparse → dense
-    if hasattr(X_transformed, "toarray"):
-        data_row = X_transformed.toarray()[0]
-    else:
-        data_row = X_transformed[0]
+    # Convert to dense
+    data_row = X_transformed.toarray()[0] if hasattr(X_transformed, "toarray") else X_transformed[0]
 
-    # Create proper explanation object
     shap_fixed = shap.Explanation(
         values=shap_single.values,
         base_values=base_value,
@@ -126,49 +149,44 @@ def explain_prediction(model, input_df, pred_class_index):
         feature_names=feature_names
     )
 
-    # =========================
-    # VISUAL PLOT
-    # =========================
     shap.plots.waterfall(shap_fixed)
 
-    # =========================
-    # CLEAN FEATURE CONTRIBUTIONS
-    # =========================
-    feature_contributions = list(zip(feature_names, shap_single.values))
+    # Filter meaningful features
+    contributions = [(n, v) for n, v in zip(feature_names, shap_single.values) if abs(v) > 1e-6]
+    contributions = sorted(contributions, key=lambda x: abs(x[1]), reverse=True)
 
-    # Remove near-zero values (IMPORTANT FIX)
-    feature_contributions = [
-        (n, v) for n, v in feature_contributions if abs(v) > 1e-6
-    ]
+    return contributions
 
-    # Sort properly
-    feature_contributions = sorted(
-        feature_contributions, key=lambda x: abs(x[1]), reverse=True
-    )
 
-    # =========================
-    # DEBUG (REAL FEATURES)
-    # =========================
-    print("\n🔍 Top RAW SHAP features:")
-    for name, val in feature_contributions[:10]:
-        print(name, round(val, 4))
+# =========================
+# MEDICAL REPORT
+# =========================
+def generate_report(input_data, prediction, risk_score, contributions, alternatives, foods):
 
-    # =========================
-    # TECHNICAL OUTPUT
-    # =========================
-    print("\n🔬 Top contributing features:")
-    for name, val in feature_contributions[:10]:
-        impact = "↑ increases risk" if val > 0 else "↓ decreases risk"
-        print(f"{name}: {round(val, 4)} ({impact})")
+    print("\n📄 MEDICAL RISK REPORT")
+    print("=" * 40)
 
-    # =========================
-    # HUMAN EXPLANATION
-    # =========================
-    human_explanations = generate_human_explanation(feature_contributions)
+    print(f"Patient Age: {input_data['age']}")
+    print(f"Condition: {input_data['condition']}")
+    print(f"Drugs: {input_data['drug1']} + {input_data['drug2']}")
 
-    print("\n🧠 Human-readable explanation:")
-    for exp in human_explanations:
-        print(f"- {exp}")
+    print("\n🔍 Risk Assessment:")
+    print(f"Severity: {prediction}")
+    print(f"High Risk Probability: {round(risk_score, 3)}")
+
+    print("\n🧠 Key Factors:")
+    for name, val in contributions[:5]:
+        print(f"- {name} ({round(val,3)})")
+
+    print("\n💊 Suggested Alternatives:")
+    for alt in alternatives:
+        print("-", alt)
+
+    print("\n🍽️ Foods to Avoid:")
+    for food in foods:
+        print("-", food)
+
+    print("=" * 40)
 
 
 # =========================
@@ -183,13 +201,14 @@ def main():
         "drug2": "ibuprofen",
         "drug1_class": "NSAID",
         "drug2_class": "NSAID",
-        "age": 45,
+        "age": 5,
         "condition": "hypertension",
-        "dosage1": 100,
+        "dosage1": 500,
         "dosage2": 200
     }
 
-    input_df = prepare_input(sample_input)
+    input_df = pd.DataFrame([sample_input])
+    input_df = feature_engineering(input_df)
 
     pred_encoded, prediction, risk_score, prob_dist = predict(
         model, label_encoder, input_df
@@ -201,8 +220,17 @@ def main():
     print("Risk Score (High):", round(risk_score, 3))
     print("Class Probabilities:", prob_dist)
 
-    # Explanation
-    explain_prediction(model, input_df, pred_encoded)
+    # SHAP explanation
+    contributions = explain_prediction(model, input_df, pred_encoded)
+
+    # Alternatives
+    alternatives = suggest_alternatives(sample_input, risk_score)
+
+    # Food interactions
+    foods = check_food_interactions(sample_input)
+
+    # Final report
+    generate_report(sample_input, prediction, risk_score, contributions, alternatives, foods)
 
 
 # =========================
