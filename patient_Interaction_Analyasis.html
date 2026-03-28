@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="analysisApp">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Interaction Intelligence</title>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #6366f1; --success: #2dd4bf; --danger: #f43f5e; --warning: #fbbf24;
+            --glass: rgba(15, 23, 42, 0.95);
+        }
+
+        body {
+            margin: 0; font-family: 'Inter', sans-serif;
+            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), 
+                        url('E:/medivise/assets/img/pills.jpg');
+            background-size: cover; background-attachment: fixed; color: white;
+        }
+
+        .navbar { background: rgba(0,0,0,0.6); padding: 15px 40px; display: flex; justify-content: space-between; backdrop-filter: blur(10px); }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        
+        .glass-card { 
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 25px; 
+            padding: 35px; backdrop-filter: blur(20px); box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        /* ANALYSIS LAYOUT */
+        .analysis-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; margin-top: 25px; }
+
+        /* INTERACTION ITEMS (DOM Manipulation targets) */
+        .interaction-card {
+            background: rgba(255,255,255,0.03); border-radius: 15px; padding: 20px;
+            margin-bottom: 15px; border-left: 6px solid var(--primary); transition: 0.3s;
+        }
+        .severity-high { border-left-color: var(--danger); background: rgba(244, 63, 94, 0.05); }
+        .severity-mod { border-left-color: var(--warning); }
+
+        .details-pane { display: none; padding-top: 15px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; color: #cbd5e1; }
+
+        /*  REACT-STYLE CHART BOX */
+        .chart-box { background: rgba(0,0,0,0.2); border-radius: 20px; padding: 25px; text-align: center; }
+
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+        .badge-danger { background: var(--danger); color: white; }
+        .badge-warning { background: var(--warning); color: #000; }
+
+        .btn { border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; }
+    </style>
+</head>
+<body ng-controller="AnalysisCtrl">
+
+    <nav class="navbar">
+        <h2>MediVise <span style="font-weight:200">patient Interaction Analysis</span></h2>
+        <button class="btn btn-outline" onclick="window.location.href='patient_dashboard.html'"> Back to Dashboard</button>
+    </nav>
+
+    <div class="container">
+        <div class="glass-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h1 style="margin:0; font-size: 1.8rem;">Clinical Interaction Report</h1>
+                    <p style="opacity:0.6">Automated check for: <span ng-repeat="m in medications">{{m.name}}{{$last ? '' : ', '}}</span></p>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size: 0.8rem; opacity: 0.6;">Safety Rating</div>
+                    <div style="font-size: 1.5rem; color: var(--danger); font-weight: bold;">CRITICAL RISK</div>
+                </div>
+            </div>
+
+            <div class="analysis-grid">
+                <div class="interaction-list">
+                    <h4 style="margin-bottom:15px; opacity:0.8;">Detected Conflicts ({{results.length}})</h4>
+                    
+                    <div class="interaction-card" ng-repeat="res in results" ng-class="{'severity-high': res.severity == 'High', 'severity-mod': res.severity == 'Moderate'}">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div>
+                                <span class="badge" ng-class="res.severity == 'High' ? 'badge-danger' : 'badge-warning'">{{res.severity}}</span>
+                                <h3 style="margin: 10px 0 5px 0;">{{res.pair}}</h3>
+                                <p style="margin:0; font-size: 0.9rem;">{{res.shortDesc}}</p>
+                            </div>
+                            <button class="btn btn-outline expand-btn" style="padding: 5px 10px;">View Info</button>
+                        </div>
+                        
+                        <div class="details-pane">
+                            <strong>Clinical Warning:</strong> {{res.longDesc}}
+                            <br><br>
+                            <strong>Food/Lifestyle Warning:</strong> {{res.foodWarning}}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-box">
+                    <h4 style="margin-top:0;">Risk Distribution Map</h4>
+                    <canvas id="severityChart" style="max-height: 250px;"></canvas>
+                    <div style="margin-top:20px; font-size: 0.85rem; line-height: 1.6; text-align: left; opacity:0.8;">
+                        <p>💡 <strong> Observation:</strong> The combination of {{medications[0].name}} and {{medications[1].name}} creates a high metabolic load. Recommend pharmacist review for alternative therapy.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;">
+                <button class="btn btn-outline" onclick="history.back()">← Re-edit Medications</button>
+                <button class="btn" style="background:var(--success); color: #020617;" ng-click="sendToPharmacist()">Transmit to Pharmacist ✔</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = angular.module('analysisApp', []);
+        app.controller('AnalysisCtrl', function($scope, $http, $timeout) {
+            
+            // JSON: Retrieve data from previous page
+            const savedData = localStorage.getItem('medList');
+            $scope.medications = savedData ? JSON.parse(savedData) : [{name: "No Data Found"}];
+
+            // AJAX: Simulating a call to a backend interaction DB
+            $scope.results = [
+                {
+                    pair: "Aspirin + Warfarin",
+                    severity: "High",
+                    shortDesc: "Major Anticoagulant Interaction",
+                    longDesc: "Concurrent use may result in an increased risk of bleeding. The pharmacological effect of both agents is additive.",
+                    foodWarning: "Avoid Garlic and Ginger supplements which can further thin blood."
+                },
+                {
+                    pair: "Metformin + Alcohol",
+                    severity: "Moderate",
+                    shortDesc: "Risk of Lactic Acidosis",
+                    longDesc: "Alcohol potentiation of metformin's effect on lactate metabolism.",
+                    foodWarning: "Limit alcohol intake to prevent sudden blood sugar drops."
+                }
+            ];
+
+            //  DOM Manipulation using jQuery (inside Angular for the "View Info" feature)
+            $timeout(function() {
+                $('.expand-btn').click(function() {
+                    $(this).closest('.interaction-card').find('.details-pane').slideToggle();
+                    $(this).text($(this).text() == 'View Info' ? 'Close' : 'View Info');
+                });
+
+                // Chart.js Initialization (React-style dynamic chart)
+                const ctx = document.getElementById('severityChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Critical', 'Moderate', 'Safe'],
+                        datasets: [{
+                            data: [1, 1, 3],
+                            backgroundColor: ['#f43f5e', '#fbbf24', '#2dd4bf'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        cutout: '70%',
+                        plugins: { legend: { position: 'bottom', labels: { color: 'white' } } }
+                    }
+                });
+            }, 100);
+
+            $scope.sendToPharmacist = function() {
+                alert(" Report Encrypted and Sent to Pharmacy Dashboard.");
+            };
+        });
+    </script>
+</body>
+</html>
