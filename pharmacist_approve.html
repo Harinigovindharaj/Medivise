@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Clinical Review & Safety</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --main-bg: #020617;
+            --accent: #38bdf8;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        body {
+            margin: 0; font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)), 
+                        url('../assets/img/pharmacist-bg.png') no-repeat center center fixed;
+            background-size: cover; color: var(--text-main); min-height: 100vh;
+        }
+
+        .top-nav {
+            background: var(--sidebar-bg); border-bottom: 1px solid var(--border);
+            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+
+        /* Main Grid */
+        .review-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
+
+        .card { 
+            background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); 
+            backdrop-filter: blur(12px); overflow: hidden; margin-bottom: 20px;
+        }
+
+        .card-header { 
+            padding: 15px 20px; background: rgba(255, 255, 255, 0.03); 
+            border-bottom: 1px solid var(--border); font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* Forms & Inputs */
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .data-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+        .data-value { font-size: 15px; color: var(--text-main); margin-top: 4px; }
+
+        textarea {
+            width: 100%; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border);
+            border-radius: 8px; color: white; padding: 15px; box-sizing: border-box;
+            font-family: inherit; resize: vertical; margin-top: 10px;
+        }
+
+        /* Action Buttons */
+        .btn-stack { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        
+        .btn {
+            padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;
+            border: none; transition: 0.3s; text-align: center; text-decoration: none; font-size: 14px;
+        }
+
+        .btn-approve { background: var(--success); color: white; }
+        .btn-approve:hover { background: #059669; transform: translateY(-2px); }
+
+        .btn-flag { background: var(--danger); color: white; }
+        .btn-flag:hover { background: #dc2626; transform: translateY(-2px); }
+
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); color: white; }
+
+        .status-badge {
+            background: rgba(239, 68, 68, 0.2); color: var(--danger);
+            padding: 4px 12px; border-radius: 20px; font-size: 11px; border: 1px solid var(--danger);
+        }
+
+        .shimmer { color: var(--accent); opacity: 0.5; }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div style="font-weight: bold; font-size: 20px; color: var(--accent);">MediVise <span style="color: white; font-weight: 400;">| Safety Center</span></div>
+        <a href="pharmacist.html" class="btn btn-outline" style="font-size: 12px;">BACK TO DASHBOARD</a>
+    </header>
+
+    <div class="container">
+        <div class="review-grid">
+            
+            <div class="left-col">
+                <div class="card">
+                    <div class="card-header">
+                        
+                        <span>Patient Clinical Profile</span>
+                    </div>
+                    <div class="data-grid">
+                        <div>
+                            <div class="data-label">Full Name</div>
+                            <div id="p-name" class="data-value shimmer">Fetching...</div>
+                        </div>
+                        <div>
+                            <div class="data-label">Medical Record #</div>
+                            <div id="p-mrn" class="data-value">MRN-882910</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Clinical Findings & Conflict Analysis</div>
+                    <div style="padding: 20px; line-height: 1.6; color: var(--text-muted);">
+                        <p id="p-desc">Analyzing database for drug-drug interactions...</p>
+                        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+                        <div class="data-label">Pharmacist Clinical Notes</div>
+                        <textarea id="pharmacist-notes" rows="5" placeholder="Add clinical remarks or justification for approval/rejection..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div class="card">
+                    <div class="card-header">Decision Panel</div>
+                    <div class="btn-stack">
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px; text-align: center;">
+                            Final Authorization Required
+                        </div>
+                        
+                        <button id="btn-approve" class="btn btn-approve">APPROVE PRESCRIPTION</button>
+                        
+                        <button id="btn-flag" class="btn btn-flag">FLAG AS UNSAFE</button>
+                        
+                        <hr style="border: 0; border-top: 1px solid var(--border); margin: 10px 0;">
+                        
+                        <button id="btn-discard" class="btn btn-outline">DISCARD ALERT</button>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 20px; font-size: 12px; color: var(--text-muted);">
+                    <strong>Audit Trail:</strong><br>
+                    <span id="timestamp">--</span><br>
+                    System: Interaction Check Verified
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    $(document).ready(function() {
+        // --- Simulate Data Load ---
+        setTimeout(function() {
+            $('#p-name').text("Sarah Jenkins").removeClass('shimmer');
+            $('#p-desc').html("System detected a high-risk conflict between <b>Warfarin</b> and <b>Aspirin</b>.<br><br>The patient's history shows a GI Bleed event in June 2024. Proceed with extreme caution.");
+            $('#timestamp').text("Alert Timestamp: " + new Date().toLocaleString());
+        }, 1000);
+
+        // --- 8. Provide Remarks Logic ---
+        function checkNotes() {
+            if ($('#pharmacist-notes').val().trim() === "") {
+                alert("Please add pharmacist notes/remarks before finalizing the decision.");
+                return false;
+            }
+            return true;
+        }
+
+        // --- 7. Approval Logic ---
+        $('#btn-approve').on('click', function() {
+            if(checkNotes()) {
+                if(confirm("Confirm Approval? This will be electronically signed by you.")) {
+                    $(this).text("PROCESSING...").css('opacity', '0.5');
+                    setTimeout(() => { window.location.href = "pharmacist.html"; }, 1500);
+                }
+            }
+        });
+
+        // --- 7. Flag Unsafe Logic ---
+        $('#btn-flag').on('click', function() {
+            if(checkNotes()) {
+                if(confirm("Flag this prescription as UNSAFE? The prescribing doctor will be notified immediately.")) {
+                    $(this).text("FLAGGING...").css('opacity', '0.5');
+                    setTimeout(() => { window.location.href = "pharmacist.html"; }, 1500);
+                }
+            }
+        });
+
+        $('#btn-discard').on('click', function() {
+            if(confirm("Discard without action?")) {
+                window.location.href = "pharmacist.html";
+            }
+        });
+    });
+    </script>
+</body>
+</html>
