@@ -28,13 +28,50 @@
         <button style="background: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer;" ng-click="dispatch(a)">RESPOND NOW</button>
     </div>
 
-    <script>
-        angular.module('alertApp', []).controller('AlertCtrl', function($scope) {
-            $scope.criticalCases = [
-                { patient: 'John Wick', condition: 'Tachycardia', vitals: '145 BPM', ward: 'ICU-04', timestamp: '12:45 PM' },
-                { patient: 'Bruce Banner', condition: 'Abnormal Gamma Levels', vitals: 'Critically High', ward: 'B-Wing', timestamp: '12:40 PM' }
-            ];
-            $scope.dispatch = function(a) { alert("Medical Team Dispatched to Ward " + a.ward); };
+   <script>
+        const app = angular.module('alertApp', []);
+
+        // Enables session-based authentication with your Express backend
+        app.config(['$httpProvider', function($httpProvider) {
+            $httpProvider.defaults.withCredentials = true;
+        }]);
+
+        app.controller('AlertCtrl', function($scope, $http) {
+            $scope.criticalCases = [];
+
+            // 1. FETCH ACTUAL CRITICAL CASES FROM BACKEND
+            $scope.init = function() {
+                $http.get('http://localhost:5000/api/doctor/all')
+                    .then(function(response) {
+                        if (response.data.success) {
+                            // Filter all records to only show those marked as 'Critical'
+                            // or those with a high risk score ( > 70)
+                            $scope.criticalCases = response.data.data.filter(function(item) {
+                                return item.status === 'Critical' || item.risk > 70;
+                            }).map(function(item) {
+                                // Mapping backend fields to your UI fields
+                                return {
+                                    patient: item.patientName || item.name,
+                                    condition: item.risk > 85 ? 'Severe Risk' : 'High Risk',
+                                    vitals: 'Risk Score: ' + item.risk + '%',
+                                    ward: item.patientId || 'General',
+                                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                                };
+                            });
+                        }
+                    }, function(error) {
+                        console.error("Critical Alert System Offline:", error);
+                    });
+            };
+
+            // 2. DISPATCH LOGIC
+            $scope.dispatch = function(a) {
+                // In a real app, you could send a POST request to a 'notifications' table here
+                alert("EMERGENCY RESPONSE INITIATED: Medical Team Dispatched to " + a.ward + " for " + a.patient);
+            };
+
+            // Run on load
+            $scope.init();
         });
     </script>
 </body>
