@@ -1,3 +1,4 @@
+
 const express = require("express");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
@@ -55,6 +56,8 @@ const Drug = mongoose.model("Drug", {
   interactions: [String]
 });
 
+
+
 /* -------- SESSION -------- */
 app.use(session({
   secret: "super_secret_key",
@@ -77,8 +80,11 @@ const interactions = [
 ];
 
 /* -------- ROUTES -------- */
+
 const goRoutes = require("./go.js")(User, Prescription, upload, interactions);
 app.use("/go", goRoutes);
+const doctorRoutes = require("./routes/doctorRoutes.js")(Prescription);
+app.use("/doctor", doctorRoutes);
 
 /* -------- TEST -------- */
 app.get("/", (req, res) => {
