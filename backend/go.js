@@ -252,14 +252,71 @@ router.get("/patient/report/:id", async (req, res) => {
   const doc = new PDFDocument();
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "attachment; filename=report.pdf");
+  res.setHeader("Content-Disposition", "attachment; filename=Medivise_Report.pdf");
 
   doc.pipe(res);
 
-  doc.fontSize(18).text("Medivise Report", { align: "center" });
-
+  // TITLE
+  doc.fontSize(20).text("MediVise Clinical Report", { align: "center" });
   doc.moveDown();
-  doc.text("Drugs: " + prescription.drugs.join(", "));
+
+  // DRUGS
+  doc.fontSize(12).text("Medications:");
+  doc.text(prescription.drugs.join(", "));
+  doc.moveDown();
+
+  const interactions = prescription.analysis?.interactions || [];
+
+  // RISK SUMMARY
+  doc.fontSize(14).text("Risk Summary:");
+  doc.text("Overall Risk: " + (prescription.analysis?.overallRisk || "Unknown"));
+  doc.moveDown();
+
+  // INTERACTIONS
+  doc.fontSize(14).text("Detected Interactions:");
+  doc.moveDown();
+
+  interactions.forEach((i, index) => {
+    const a = i.analysis || {};
+
+    doc.fontSize(12).text(
+      `${index + 1}. ${i.drug1} + ${i.drug2}`
+    );
+
+    doc.text(`   Severity: ${a.severity || "N/A"}`);
+    doc.text(`   Risk Score: ${(a.risk_score || 0).toFixed(2)}`);
+
+    // Factors
+    if (a.factors?.length) {
+      doc.text("   Key Factors:");
+      a.factors.slice(0, 3).forEach(f => {
+        doc.text(`     - ${f[0]} (${f[1].toFixed(2)})`);
+      });
+    }
+
+    // Food warnings
+    if (a.food_warnings?.length) {
+      doc.text("   Food Warnings:");
+      doc.text("     " + a.food_warnings.join(", "));
+    }
+
+    // Alternatives
+    if (a.alternatives?.length) {
+      doc.text("   Suggested Alternatives:");
+      a.alternatives.forEach(alt => {
+        doc.text(`     - ${alt}`);
+      });
+    }
+
+    doc.moveDown();
+  });
+
+  // FOOTER
+  doc.moveDown();
+  doc.fontSize(10).text(
+    "⚠️ Consult a healthcare professional before making any medication changes.",
+    { align: "center" }
+  );
 
   doc.end();
 });
@@ -554,14 +611,24 @@ router.get("/researcher/export", isResearcher, async (req, res) => {
 const { exec } = require("child_process");
 
 router.post("/upload", upload.single("image"), async (req, res) => {
-  if (!req.session.userId) return res.send("Please login");
-  if (!req.file) return res.send("No file uploaded");
-
+  console.log("UPLOAD HIT", req.file, req.session.userId);
+  if (!req.session.userId) {
+    console.log("NOT LOGGED IN");
+    return res.send("Please login");
+  }
+  if (!req.file) {
+    console.log("NO FILE UPLOADED");
+    return res.send("No file uploaded");
+  }
   const imagePath = req.file.path;
+  const path = require("path");
 
-  exec(`python src/ocr_runner.py "${imagePath}"`, async (error, stdout) => {
+  const scriptPath = path.join(__dirname, "../ml-model/ocr_runner.py");
+
+  exec(`python "${scriptPath}" "${imagePath}"`, async (error, stdout) => {
     if (error) {
       console.error(error);
+      console.log("OCR failed");
       return res.status(500).send("OCR failed");
     }
 
@@ -570,6 +637,7 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     try {
       drugs = JSON.parse(stdout);
     } catch {
+      console.log("OCR JSON parse failed");
       console.error("OCR JSON parse failed:", stdout);
     }
 
@@ -583,6 +651,7 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     await prescription.save();
 
     // ONLY RETURN DRUGS (NO ML)
+    console.log("DRUGS:", drugs);
     res.json({
       prescriptionId: prescription._id,
       drugs

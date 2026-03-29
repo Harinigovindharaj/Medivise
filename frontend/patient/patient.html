@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="mediViseApp">
+<html lang="en" ng-app="dashApp">
 <head>
     <meta charset="UTF-8">
     <title>MediVise Pro | Dashboard</title>
@@ -61,12 +61,39 @@
     </div>
 
     <script>
-        const app = angular.module('mediViseApp', []);
-        app.controller('DashCtrl', function($scope) {
-            // Retrieve data from other pages via localStorage
-            const meds = JSON.parse(localStorage.getItem('medList') || '[]');
-            $scope.medCount = meds.length || 0;
-            $scope.alertCount = 4; // Mock count
+        angular.module('dashApp', []).controller('DashCtrl', function($scope, $http) {
+
+            // Get prescriptions (history)
+            $http.get('http://localhost:5000/go/patient/prescriptions', {
+                withCredentials: true
+            }).then(function(res) {
+
+                const prescriptions = res.data || [];
+
+                // Total meds count
+                $scope.medCount = prescriptions.reduce((acc, p) => 
+                    acc + (p.drugs?.length || 0), 0
+                );
+
+                // Alerts = HIGH risk prescriptions
+                let alertCount = 0;
+
+                const promises = prescriptions.map(p =>
+                    $http.get(`http://localhost:5000/go/patient/analysis/${p.id}`, {
+                        withCredentials: true
+                    })
+                );
+
+                Promise.all(promises).then(results => {
+                    results.forEach(r => {
+                        if (r.data.analysis?.overallRisk === "High") {
+                            alertCount++;
+                        }
+                    });
+                    $scope.alertCount = alertCount;
+                    $scope.$apply();
+                });
+            });
         });
     </script>
 </body>

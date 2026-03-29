@@ -101,7 +101,7 @@
                         <span style="background:rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">{{results.length}}</span>
                     </h4>
                     
-                    <div class="interaction-card" ng-repeat="res in results" ng-class="{'severity-high': res.severity == 'High', 'severity-mod': res.severity == 'Moderate'}">
+                    <div class="interaction-card" ng-repeat="res in results" ng-class="{'severity-high': res.severity == 'high', 'severity-mod': res.severity == 'moderate'}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <div>
                                 <span class="badge" ng-class="res.severity == 'High' ? 'badge-danger' : 'badge-warning'">{{res.severity}} Severity</span>
@@ -160,52 +160,95 @@
     </div>
 
     <script>
-        const app = angular.module('analysisApp', []);
-        app.controller('AnalysisCtrl', function($scope, $timeout) {
-            
-            const savedData = localStorage.getItem('medList');
-            $scope.medications = savedData ? JSON.parse(savedData) : [{name: "Aspirin"}, {name: "Warfarin"}];
+        angular.module('analysisApp', []).controller('AnalysisCtrl', function($scope, $timeout) {
+ 
+            $scope.loading = true;
+            $scope.error = null;
+            $scope.results = [];
+            $scope.medications = [];
+            $scope.overallRisk = 'Low';
+ 
+            const prescriptionId = sessionStorage.getItem("prescriptionId");
+ 
+            if (!prescriptionId) {
+                $scope.loading = false;
+                $scope.error = "No prescription found. Please go back and upload a prescription.";
+            } else {
+                // Call the real backend analysis route
+                fetch("http://localhost:5000/go/patient/analyze/" + prescriptionId, {
+                    method: "POST",
+                    credentials: "include"
+                })
+                .then(res => res.json())
+                .then(data => {
+                    console.log("ANALYSIS DATA:", data);
+ 
+                    if (data.message) {
+                        // e.g. "Not enough drugs"
+                        $scope.error = data.message;
+                        $scope.loading = false;
+                        $scope.$apply();
+                        return;
+                    }
+ 
+                    $timeout(function() {
+                        $scope.medications = (data.drugs || []).map(d => ({name: d}));
+                        $scope.overallRisk = data.overallRisk || 'Low';
+ 
+                        // Map backend interactions to display format
+                        $scope.results = (data.interactions || []).map(function(item) {
+                            const analysis = item.analysis || {};
 
-            $scope.results = [
-                {
-                    pair: $scope.medications[0].name + " + " + ($scope.medications[1] ? $scope.medications[1].name : "Anticoagulant"),
-                    severity: "High",
-                    shortDesc: "Synergistic Antithrombotic Effect",
-                    longDesc: "This combination significantly increases the risk of spontaneous internal hemorrhage. Both medications work on different pathways of the coagulation cascade.",
-                    foodWarning: "Avoid high-dose Vitamin K (spinach, kale) and natural blood thinners like Ginger or Ginseng."
-                },
-                {
-                    pair: ($scope.medications[1] ? $scope.medications[1].name : "Metformin") + " + Lifestyle",
-                    severity: "Moderate",
-                    shortDesc: "Metabolic Interference",
-                    longDesc: "Potential for altered renal clearance of secondary medications. Monitoring of kidney function (GFR) is advised.",
-                    foodWarning: "Maintain consistent hydration. Avoid excessive caffeine which may increase jitteriness."
-                }
-            ];
+                            return {
+                                pair: `${item.drug1} + ${item.drug2}`,   
+                                severity: (analysis.severity || 'low').toLowerCase(),
 
-            $scope.hasHighRisk = $scope.results.some(r => r.severity === 'High');
+                                shortDesc: `Risk Score: ${(analysis.risk_score || 0).toFixed(2)}`, 
 
-            // Direct mapping to your file structure
-            $scope.goToRiskAnalysis = function() {
-                alert("Generating detailed risk metrics...");
-                window.location.href = 'patient_riskAnalysis.html'; 
-            };
+                                longDesc: (analysis.factors || [])
+                                    .slice(0, 3)
+                                    .map(f => `${f[0]} (${f[1].toFixed(2)})`)
+                                    .join(", ") || "No major factors detected", 
 
-            $timeout(function() {
-                $('.expand-btn').click(function() {
-                    const card = $(this).closest('.interaction-card');
-                    card.find('.details-pane').slideToggle(300);
-                    $(this).text($(this).text() == 'View Info' ? 'Hide Info' : 'View Info');
+                                foodWarning: (analysis.food_warnings || []).join(", ") || "No food restrictions", 
+
+                                alternatives: analysis.alternatives || []
+                            };
+                        });
+                        $scope.hasHighRisk = $scope.results.some(r => r.severity === 'high');
+                        $scope.loading = false;
+ 
+                        // Draw chart after results load
+                        $timeout(function() {
+                            drawChart();
+                            bindExpandButtons();
+                        }, 100);
+                    });
+                })
+                .catch(err => {
+                    console.error("Analysis error:", err);
+                    $timeout(function() {
+                        $scope.loading = false;
+                        $scope.error = "Failed to run analysis. Make sure the ML server is running on port 8000.";
+                    });
                 });
-
-                const ctx = document.getElementById('severityChart').getContext('2d');
+            }
+ 
+            function drawChart() {
+                const ctx = document.getElementById('severityChart');
+                if (!ctx) return;
+ 
+                const high     = $scope.results.filter(r => r.severity === 'high').length;
+                const moderate = $scope.results.filter(r => r.severity === 'moderate').length;
+                const low      = $scope.results.filter(r => r.severity === 'low').length;
+ 
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['High Risk', 'Moderate', 'Safe'],
+                        labels: ['High Risk', 'Moderate', 'Low / Safe'],
                         datasets: [{
-                            data: [1, 1, 2],
-                            backgroundColor: ['#f43f5e', '#fbbf24', '#6366f1'],
+                            data: [high, moderate, low || 1],
+                            backgroundColor: ['#f43f5e', '#fbbf24', '#2dd4bf'],
                             hoverOffset: 10,
                             borderWidth: 0
                         }]
@@ -213,14 +256,25 @@
                     options: {
                         cutout: '75%',
                         plugins: {
-                            legend: { position: 'bottom', labels: { color: 'white', padding: 20, font: { family: 'Inter', size: 12 } } }
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: 'white', padding: 20, font: { size: 12 } }
+                            }
                         }
                     }
                 });
-            }, 100);
-
+            }
+ 
+            function bindExpandButtons() {
+                $('.expand-btn').off('click').on('click', function() {
+                    const card = $(this).closest('.interaction-card');
+                    card.find('.details-pane').slideToggle(300);
+                    $(this).text($(this).text() === 'View Info' ? 'Hide Info' : 'View Info');
+                });
+            }
+ 
             $scope.sendToPharmacist = function() {
-                alert("SECURITY ALERT: Analysis report has been encrypted and transmitted to your pharmacy's clinical queue.");
+                alert("Report submitted to your pharmacy's clinical queue.");
             };
         });
     </script>

@@ -2,8 +2,8 @@ import sys
 import json
 
 from ocr import extract_text_with_confidence
-from drug_extraction import extract_drug_candidates
-from fuzzy_match import extract_drugs_fuzzy
+from text_processing import extract_drug_candidates
+from drug_extraction import extract_drugs_fuzzy
 
 image_path = sys.argv[1]
 

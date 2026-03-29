@@ -3,9 +3,44 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const mongoose = require("mongoose");
 const multer = require("multer");
+const cors = require("cors");
 
 const app = express();
+app.use(cors({
+  origin: "http://localhost:5000",
+  credentials: true
+}));
 app.use(express.json());
+
+/* -------- SESSION -------- */
+app.use(session({
+  secret: "super_secret_key",
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: "mongodb://127.0.0.1:27017/test"
+  }),
+  cookie: {
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60
+  }
+}));
+
+
+app.use((req, res, next) => {
+  if (!req.session.userId) {
+    req.session.userId = new mongoose.Types.ObjectId(); // ✅ valid
+    req.session.role = "patient";
+  }
+  next();
+});
+
+
+const path = require("path");
+app.use(express.static(path.join(__dirname, "../frontend")));
+app.get("/check-path", (req, res) => {
+  res.send(path.join(__dirname, "../frontend"));
+});
 
 /* -------- MULTER -------- */
 const storage = multer.diskStorage({
@@ -25,7 +60,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/test")
 
 /* -------- MODELS -------- */
 
-// ✅ Add more realistic user fields
+// Add more realistic user fields
 const User = mongoose.model("User", {
   email: String,
   password: String,
@@ -39,6 +74,7 @@ const Prescription = mongoose.model("Prescription", {
   userId: mongoose.Schema.Types.ObjectId,
   image: String,
   drugs: [String],
+  createdAt: { type: Date, default: Date.now },
   status: String,
   note: String,
   analysis: {
@@ -55,29 +91,16 @@ const Drug = mongoose.model("Drug", {
   interactions: [String]
 });
 
-/* -------- SESSION -------- */
-app.use(session({
-  secret: "super_secret_key",
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: "mongodb://127.0.0.1:27017/test"
-  }),
-  cookie: {
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60
-  }
-}));
 
-/* -------- INTERACTIONS (fallback only) -------- */
-const interactions = [
-  { drug1: "Paracetamol", drug2: "Ibuprofen", severity: "Low" },
-  { drug1: "Aspirin", drug2: "Warfarin", severity: "High" },
-  { drug1: "Metformin", drug2: "Alcohol", severity: "Medium" }
-];
+// /* -------- INTERACTIONS (fallback only) -------- */
+// const interactions = [
+//   { drug1: "Paracetamol", drug2: "Ibuprofen", severity: "Low" },
+//   { drug1: "Aspirin", drug2: "Warfarin", severity: "High" },
+//   { drug1: "Metformin", drug2: "Alcohol", severity: "Medium" }
+// ];
 
 /* -------- ROUTES -------- */
-const goRoutes = require("./go.js")(User, Prescription, upload, interactions);
+const goRoutes = require("./go.js")(User, Prescription, upload);
 app.use("/go", goRoutes);
 
 /* -------- TEST -------- */

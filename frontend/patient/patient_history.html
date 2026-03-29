@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="mediViseApp">
+<html lang="en" ng-app="historyApp">
 <head>
     <meta charset="UTF-8">
     <title>MediVise Pro | Medical History</title>
@@ -147,25 +147,41 @@
     </div>
 
     <script>
-        const app = angular.module('mediViseApp', []);
-        
-        app.controller('HistoryCtrl', function($scope) {
-    
-    $scope.navToDashboard = function() {
-        window.location.href = 'patient.html';
-    };
+        angular.module('historyApp', []).controller('HistoryCtrl', function($scope, $http) {
 
-            // JSON History Data
-            $scope.history = [
-                { date: '2026-03-20', name: 'Atorvastatin', dosage: '20mg / Once Daily', status: 'Active' },
-                { date: '2026-02-15', name: 'Amoxicillin', dosage: '500mg / Twice Daily', status: 'Completed' },
-                { date: '2026-01-10', name: 'Lisinopril', dosage: '10mg / Once Daily', status: 'Active' },
-                { date: '2025-12-05', name: 'Metformin', dosage: '500mg / With Meals', status: 'Completed' },
-                { date: '2025-11-20', name: 'Ibuprofen', dosage: '400mg / As Needed', status: 'Completed' }
-            ];
+            $scope.navToDashboard = function() {
+                window.location.href = 'patient.html';
+            };
 
+            $scope.history = [];
+
+            $http.get('http://localhost:5000/go/patient/prescriptions', {
+                withCredentials: true
+            }).then(function(res) {
+
+                const prescriptions = res.data || [];
+
+                $scope.history = prescriptions.map(p => ({
+                    id: p.id,
+                    date: p.analysis?.createdAt
+                    ? new Date(p.analysis.createdAt).toLocaleDateString()
+                    : new Date(p.createdAt).toLocaleDateString(),
+                    name: p.drugs?.join(", ") || "No drugs",
+                    dosage: "—",
+                    status: p.analysis ? "Active" : "Completed"
+                }));
+            });
+
+            // Download report
             $scope.viewReport = function(item) {
-                alert("Generating Clinical PDF Report for: " + item.name + "\nDate: " + item.date);
+                const url = "http://localhost:5000/go/patient/report/" + item.id;
+
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Medivise_Report.pdf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             };
         });
     </script>

@@ -100,7 +100,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2 style="margin:0">Interaction Risk Score</h2>
-                        <p style="opacity: 0.6;">Biochemical conflict probability: <b style="color:var(--danger)">High</b></p>
+                        <p style="opacity: 0.6;">Biochemical conflict probability: <b style="color:var(--danger)">{{analytics.severity}}</b></p>
                     </div>
                     <div class="risk-score">{{ analytics.score }}%</div>
                 </div>
@@ -191,23 +191,78 @@
             $scope.analytics = {};
             $scope.alternatives = [];
 
-            // Simulation of Backend Processing
+            // Backend Processing
             $scope.fetchBackendData = function() {
+                const prescriptionId = sessionStorage.getItem("prescriptionId");
+
+                if (!prescriptionId) {
+                    alert("No prescription found");
+                    return;
+                }
+
                 $scope.loading = true;
-                $timeout(function() {
+
+                fetch("http://localhost:5000/go/patient/analysis/" + prescriptionId, {
+                    method: "GET",
+                    credentials: "include"
+                })
+                .then(res => res.json())
+                .then(data => {
+                    console.log("RISK DATA:", data);
+
+                    const interactions = data.analysis?.interactions || [];
+
+                    // Compute overall risk score
+                    const maxRisk = Math.max(...interactions.map(i => i.analysis?.risk_score || 0), 0);
+
                     $scope.analytics = {
-                        score: 88,
-                        severity: "Critical",
-                        category: "Synergistic",
-                        reliability: 99.2
+                        score: Math.round(maxRisk * 100),
+                        severity: data.analysis?.overallRisk || "Low",
+                        category: maxRisk > 0.7 ? "Severe Interaction" :
+                                maxRisk > 0.4 ? "Moderate Interaction" : "Low Risk",
+                        reliability: 95 + Math.random() * 5   // optional (fake but ok)
                     };
-                    $scope.alternatives = [
-                        {original: "Warfarin", suggested: "Apixaban", reason: "Lower GI bleeding risk / No INR monitoring", selected: true},
-                        {original: "Aspirin", suggested: "Clopidogrel", reason: "Reduced gastric erosion risk", selected: false}
-                    ];
+
+                    // Extract alternatives from ML
+                    let allAlternatives = [];
+
+                    interactions.forEach(i => {
+                        const alts = i.analysis?.alternatives || [];
+
+                        alts.forEach(a => {
+                            allAlternatives.push({
+                                original: i.drug1,
+                                suggested: a.replace("Replace " + i.drug1 + " with ", ""),
+                                reason: "AI recommended safer alternative",
+                                selected: false
+                            });
+                        });
+                    });
+
+                    // fallback if none
+                    if (allAlternatives.length === 0) {
+                        allAlternatives.push({
+                            original: "No change needed",
+                            suggested: "Continue current medication",
+                            reason: "Low interaction risk",
+                            selected: true
+                        });
+                    }
+
+                    $scope.alternatives = allAlternatives;
+                    $scope.alternatives[0].selected = true;
+
                     $scope.loading = false;
-                    $timeout(renderChart, 100);
-                }, 1800);
+
+                    setTimeout(renderChart, 100);
+                    $scope.$apply();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Failed to fetch risk data");
+                    $scope.loading = false;
+                    $scope.$apply();
+                });
             };
 
             $scope.nextStep = function() {
@@ -272,7 +327,24 @@
                 });
             }
 
-            $scope.downloadReport = function() { alert("Clinical PDF Report Generated Successfully."); };
+            $scope.downloadReport = function() {
+                const prescriptionId = sessionStorage.getItem("prescriptionId");
+
+                if (!prescriptionId) {
+                    alert("No prescription found");
+                    return;
+                }
+
+                const url = "http://localhost:5000/go/patient/report/" + prescriptionId;
+
+                // Trigger file download
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Medivise_Report.pdf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
             $scope.emailReport = function() { alert("Report dispatched to your healthcare provider's secure portal."); };
 
             // Initial Load

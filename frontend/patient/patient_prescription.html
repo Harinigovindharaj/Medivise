@@ -5,7 +5,6 @@
     <title>MediVise Patient | Advanced Analysis</title>
     
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -16,8 +15,9 @@
 
         body {
             margin: 0; font-family: 'Inter', sans-serif;
-            background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), 
-                        url('E:/medivise/assets/img/pills.jpg');
+            /* background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), 
+                        url('E:/medivise/assets/img/pills.jpg'); */
+            background: #111;
             background-size: cover; background-attachment: fixed; color: white;
         }
 
@@ -61,7 +61,7 @@
 
     <nav class="navbar">
         <h2 style="margin:0;">MediVise <span style="font-weight:200">Patient</span></h2>
-        <button class="nav-link" ng-click="confirmExit()"> Back to Dashboard</button>
+        <button type="button" class="nav-link" ng-click="confirmExit()"> Back to Dashboard</button>
 
     </nav>
 
@@ -78,13 +78,13 @@
             <p style="opacity: 0.7;">Select your prescription file for AI scanning.</p>
             <input type="file" id="fileInput" style="margin: 20px 0;">
             <br>
-            <button class="btn btn-next" ng-click="moveNext()">Next: Review Data →</button>
+            <button type="button" class="btn btn-next" ng-click="moveNext()">Next: Review Data →</button>
         </div>
 
         <div class="glass-card" ng-show="step == 2">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="margin:0">Drug Inventory & Risk Analysis</h3>
-                <button class="btn btn-add" ng-click="addMed()">+ Add Medicine</button>
+                <button type="button" class="btn btn-add" ng-click="addMed()">+ Add Medicine</button>
             </div>
             
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -97,7 +97,7 @@
                             <tr ng-repeat="med in medications">
                                 <td><input type="text" class="edit-input" ng-model="med.name" ng-change="updateChart()"></td>
                                 <td><input type="text" class="edit-input" ng-model="med.dose"></td>
-                                <td><button ng-click="removeMed($index)" style="background:none; border:none; color:var(--danger); cursor:pointer">Remove</button></td>
+                                <td><button type="button" ng-click="removeMed($index)" style="background:none; border:none; color:var(--danger); cursor:pointer">Remove</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -112,8 +112,8 @@
             </div>
 
             <div style="margin-top: 30px; display:flex; justify-content: space-between;">
-                <button class="btn btn-back" ng-click="step = 1">← Back</button>
-                <button class="btn btn-next" ng-click="step = 3">Confirm Review →</button>
+                <button type="button" class="btn btn-back" ng-click="step = 1">← Back</button>
+                <button type="button" class="btn btn-next" ng-click="step = 3">Confirm Review →</button>
             </div>
         </div>
 
@@ -123,40 +123,101 @@
             <p style="opacity:0.8">Review complete. You can now proceed to see potential drug interactions.</p>
             
             <div style="margin-top: 30px; display:flex; justify-content: space-between;">
-                <button class="btn btn-back" ng-click="step = 2">← Back to Edit</button>
-                <button class="btn btn-done" ng-click="goToAnalysis()">Run Interaction Analysis </button>
+                <button type="button" class="btn btn-back" ng-click="step = 2">← Back to Edit</button>
+                <button type="button" class="btn btn-done" ng-click="goToAnalysis()">Run Interaction Analysis </button>
             </div>
         </div>
     </div>
 
     <script>
         const app = angular.module('patientApp', []);
+
         app.controller('PatientCtrl', function($scope, $timeout) {
-            $scope.step = 1;
+            console.log("CONTROLLER LOADED");
             
-            // Initial extracted data
-            $scope.medications = [
-                { name: "Aspirin", dose: "100mg", val: 45 },
-                { name: "Metformin", dose: "500mg", val: 80 }
-            ];
 
+            // INITIAL STATE (DO NOT REMOVE)
+            $scope.step = 1;
+            $scope.medications = [];
             let myChart = null;
+            console.log("INITIAL STATE:", $scope.medications);
+            // UPLOAD FUNCTION (CORE FIX)
+            $scope.moveNext = function() {
+                console.log("MOVING TO STEP 2");
 
-            // Add Medicine
+                window.addEventListener("beforeunload", function(e) {
+                    console.trace("PAGE IS UNLOADING HERE");
+                });
+    
+                const file = document.getElementById("fileInput").files[0];
+
+                if (!file) {
+                    alert("Please select a file");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("image", file);
+
+                fetch("http://localhost:5000/go/upload", {
+                    method: "POST",
+                    body: formData,
+                    credentials: "include"
+                })
+                .then(async function(res) {
+                    console.log("RAW RESPONSE:", res);
+                    var ct = res.headers.get("content-type") || "";
+                    var txt = await res.clone().text();
+                    var data;
+                    try {
+                        data = JSON.parse(txt);
+                    } catch (e) {
+                        throw e;
+                    }
+                    return data;
+                })
+                .then(data => {
+                    console.log("DATA:", data);
+
+                    if (!data || !data.prescriptionId) {
+                        console.log("INVALID RESPONSE");
+                        alert("Upload failed");
+                        return;
+                    }
+
+                    sessionStorage.setItem("prescriptionId", data.prescriptionId);
+
+                    $timeout(function() {
+                        $scope.medications = data.drugs.map(d => ({
+                            name: d,
+                            dose: "",
+                            val: Math.floor(Math.random() * 100)
+                        }));
+                        $scope.step = 2;
+                        console.log("STEP SET TO 2", $scope.step);
+                    });
+                })
+                .catch(err => {
+                    console.error("FETCH ERROR:", err);
+                    alert("Upload error" + err.message);
+                });
+            };
+
+            // KEEP YOUR EXISTING FUNCTIONS (UNCHANGED)
             $scope.addMed = function() {
-                $scope.medications.push({ name: "New Drug", dose: "", val: Math.floor(Math.random() * 100) });
+                $scope.medications.push({ name: "", dose: "", val: 50 });
                 $timeout($scope.updateChart, 50);
             };
 
-            // Remove Medicine
             $scope.removeMed = function(index) {
                 $scope.medications.splice(index, 1);
                 $timeout($scope.updateChart, 50);
             };
 
-            // Graph Logic (React-style component)
             $scope.updateChart = function() {
-                const ctx = document.getElementById('riskReachChart').getContext('2d');
+                const ctx = document.getElementById('riskReachChart');
+                if (!ctx) return;
+
                 const labels = $scope.medications.map(m => m.name);
                 const dataValues = $scope.medications.map(m => m.val || 50);
 
@@ -167,47 +228,50 @@
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Clinical Reach Index',
-                            data: dataValues,
-                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                            borderColor: '#6366f1',
-                            pointBackgroundColor: '#2dd4bf',
-                            borderWidth: 2
+                            data: dataValues
                         }]
-                    },
-                    options: {
-                        scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, pointLabels: { color: 'white' }, ticks: { display: false } } },
-                        plugins: { legend: { display: false } }
                     }
                 });
             };
 
-            // Navigation: Next
-            $scope.moveNext = function() {
-                if(!$('#fileInput').val()) {
-                    alert("Please select a prescription file first.");
-                } else {
-                    $scope.step = 2;
-                    $timeout($scope.updateChart, 100);
-                }
+            //  FINAL STEP (GO TO ANALYSIS)
+            $scope.goToAnalysis = function() {
+                const prescriptionId = sessionStorage.getItem("prescriptionId");
+
+                fetch("http://localhost:5000/go/save-drugs", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        prescriptionId,
+                        drugs: $scope.medications
+                        .map(m => m.name)
+                        .filter(name => name && name.trim() !== "")
+                    })
+                })
+                .then(res => res.text())
+                .then(() => {
+                    console.log("SENDING:", {
+                        prescriptionId,
+                        drugs: $scope.medications.map(m => m.name)
+                    });
+                    console.log("Saved successfully");
+                    sessionStorage.setItem('medList', JSON.stringify($scope.medications));
+                    window.location.href = "patient_Interaction_Analyasis.html";
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Failed to save drugs");
+                });
             };
 
-            // Navigation: Dashboard Exit
-           $scope.confirmExit = function() {
-    if(confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
-        // Updated to point to your actual dashboard filename
-        window.location.href = 'patient.html'; 
-    }
-};
-
-            // Navigation: GO TO INTERACTION PAGE
-            // Update the goToAnalysis function in patient_prescription.html
-$scope.goToAnalysis = function() {
-    localStorage.setItem('medList', JSON.stringify($scope.medications));
-    alert("Analyzing Interaction Risks...");
-    // Change 'interaction_analysis.html' to your actual file name:
-    window.location.href = 'patient_Interaction_Analyasis.html'; 
-};
+            $scope.confirmExit = function() {
+                if (confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
+                    window.location.href = 'patient.html';
+                }
+            };
         });
     </script>
 </body>

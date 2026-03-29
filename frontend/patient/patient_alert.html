@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="mediViseApp">
+<html lang="en" ng-app="alertApp">
 <head>
     <meta charset="UTF-8">
     <title>MediVise Alert | Notifications</title>
@@ -217,22 +217,67 @@
 
     <script>
         // AngularJS Module and Controller
-        const app = angular.module('mediViseApp', []);
-        app.controller('AlertsCtrl', function($scope) {
-            $scope.filterType = '';
-         
-    $scope.navToDashboard = function() {
-        window.location.href = 'patient.html';
-    };
+        angular.module('alertApp', []).controller('AlertsCtrl', function($scope, $http) {
 
-            
-            // JSON Alert Data structure
-            $scope.alerts = [
-                { type: 'Critical', title: 'Drug Interaction Detected', message: 'High risk detected between Warfarin and Aspirin.', time: '2 mins ago' },
-                { type: 'Reminder', title: 'Medication Time', message: 'It is time to take your Lisinopril 10mg dose.', time: '1 hour ago' },
-                { type: 'Warning', title: 'Heart Rate Alert', message: 'Pulse elevated after last dosage. Monitoring active.', time: '3 hours ago' },
-                { type: 'Reminder', title: 'Refill Warning', message: 'Your Metformin supply is running low (4 tabs left).', time: 'Yesterday' }
-            ];
+            $scope.filterType = '';
+            $scope.alerts = [];
+
+            $scope.navToDashboard = function() {
+                window.location.href = 'patient.html';
+            };
+
+            // 🔥 Fetch prescriptions
+            $http.get('http://localhost:5000/go/patient/prescriptions', {
+                withCredentials: true
+            }).then(function(res) {
+
+                const prescriptions = res.data || [];
+
+                const requests = prescriptions.map(p =>
+                    $http.get(`http://localhost:5000/go/patient/analysis/${p.id}`, {
+                        withCredentials: true
+                    }).then(r => ({ p, analysis: r.data.analysis }))
+                );
+
+                Promise.all(requests).then(results => {
+
+                    const alerts = [];
+
+                    results.forEach(r => {
+                        const risk = r.analysis?.overallRisk;
+
+                        if (risk === "High") {
+                            alerts.push({
+                                type: "Critical",
+                                title: "Severe Drug Interaction",
+                                message: `${r.p.drugs.join(", ")} combination is high risk`,
+                                time: "Recent"
+                            });
+                        }
+                        else if (risk === "Moderate") {
+                            alerts.push({
+                                type: "Warning",
+                                title: "Moderate Interaction",
+                                message: `${r.p.drugs.join(", ")} needs monitoring`,
+                                time: "Recent"
+                            });
+                        }
+                    });
+
+                    // fallback reminder
+                    if (alerts.length === 0) {
+                        alerts.push({
+                            type: "Reminder",
+                            title: "All Clear",
+                            message: "No risky drug interactions detected",
+                            time: "Now"
+                        });
+                    }
+
+                    $scope.alerts = alerts;
+                    $scope.$apply();
+                });
+            });
         });
         
     </script>
