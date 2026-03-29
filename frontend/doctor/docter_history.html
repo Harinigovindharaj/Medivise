@@ -5,12 +5,13 @@
     <title>MediVise | Clinical History Archive</title>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
     <style>
         :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(30, 41, 59, 0.85); --border: rgba(255, 255, 255, 0.1); }
         body { 
             margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url('E:/medivise/assets/img/doctor-bg.png');
-            background-size: cover; background-attachment: fixed; color: white; padding: 40px; min-height: 100vh;
+            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9));
+            color: white; padding: 40px; min-height: 100vh;
         }
         .history-grid { display: grid; grid-template-columns: 320px 1fr; gap: 25px; max-width: 1400px; margin: 0 auto; }
         .record-card { 
@@ -19,135 +20,118 @@
             display: flex; flex-direction: column;
         }
         .scroll-area { overflow-y: auto; flex-grow: 1; padding-right: 10px; }
-        
-        /* List Items */
+
         .list-item { 
             padding: 15px; border-radius: 12px; margin-bottom: 10px;
-            background: rgba(255,255,255,0.03); cursor: pointer; transition: 0.3s;
-            border: 1px solid transparent;
+            background: rgba(255,255,255,0.03); cursor: pointer;
         }
-        .list-item:hover { background: rgba(255,255,255,0.08); }
-        .list-item.active { background: var(--primary); color: #0f172a; border-color: var(--primary); }
+        .list-item.active { background: var(--primary); color: #0f172a; }
 
-        /* Prescription Cards */
         .rx-card { 
             background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; 
             margin-bottom: 15px; border-left: 5px solid var(--primary);
         }
-        .timestamp { font-size: 0.75rem; opacity: 0.6; font-family: monospace; }
-        
+
         .btn-nav { 
             background: var(--primary); color: #0f172a; padding: 10px 20px; 
             border-radius: 10px; text-decoration: none; font-weight: 700; 
         }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
+
 <body ng-controller="HistoryCtrl">
 
-    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-        <div>
-            <h1 style="margin:0; font-weight: 700;">Clinical History</h1>
-            <p style="opacity:0.6; margin:5px 0 0 0;">Accessing permanent medical archives</p>
-        </div>
-        <a href="doctor.html" class="btn-nav">← Back to Dashboard</a>
-    </header>
+<header style="display:flex; justify-content:space-between;">
+    <h1>Clinical History</h1>
+    <a href="doctor.html" class="btn-nav">← Back</a>
+</header>
 
-    <div class="history-grid">
-        <div class="record-card">
-            <h3 style="margin-top:0;">Archive Records</h3>
-            <input type="text" ng-model="query" placeholder="Search archives..." 
-                   style="width:100%; padding:12px; border-radius:10px; border:none; background:rgba(0,0,0,0.3); color:white; margin-bottom:20px; box-sizing: border-box;">
-            
-            <div class="scroll-area">
-                <div class="list-item" ng-repeat="p in patients | filter:query" 
-                     ng-click="loadPatientHistory(p)" ng-class="{active: selectedPatient.id === p.id}">
-                    <div style="font-weight: 600;">{{p.name}}</div>
-                    <div style="font-size: 0.8rem; opacity: 0.7;">ID: {{p.id}}</div>
-                </div>
-                <div ng-if="patients.length == 0" style="text-align:center; opacity:0.5; padding:20px;">
-                    No patient records found in storage.
-                </div>
-            </div>
-        </div>
+<div class="history-grid">
 
-        <div class="record-card">
-            <div ng-if="!selectedPatient" style="text-align:center; margin: auto; opacity:0.3;">
-                <span style="font-size: 5rem;"></span>
-                <h2>Select a patient to retrieve history</h2>
-            </div>
+    <!-- PATIENT LIST -->
+    <div class="record-card">
+        <h3>Patients</h3>
 
-            <div ng-if="selectedPatient" class="scroll-area">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <h2 style="margin:0;">{{selectedPatient.name}}</h2>
-                        <p style="opacity:0.6;">Patient ID: {{selectedPatient.id}} | Age: {{selectedPatient.age}}</p>
-                    </div>
-                    <div style="text-align:right;">
-                        <span style="background:rgba(46, 204, 113, 0.2); color:#2ecc71; padding:5px 12px; border-radius:20px; font-size:0.8rem;">Verified Archive</span>
-                    </div>
-                </div>
+        <input type="text" ng-model="query" placeholder="Search..." />
 
-                <hr style="border:0; border-top:1px solid var(--border); margin:25px 0;">
+        <div class="scroll-area">
+            <div class="list-item"
+                 ng-repeat="p in patients | filter:query"
+                 ng-click="loadPatientHistory(p)"
+                 ng-class="{active: selectedPatient._id === p._id}">
 
-                <h3> Past Prescriptions</h3>
-                <div class="rx-card" ng-repeat="rx in filteredHistory | orderBy:'-timestamp'">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:1.1rem; color:var(--primary);">{{rx.name}}</strong>
-                        <span class="timestamp">Issued: {{rx.timestamp | date:'MMM d, yyyy - HH:mm'}}</span>
-                    </div>
-                    <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div><small style="opacity:0.5;">DOSAGE</small><br>{{rx.dose}}mg</div>
-                        <div><small style="opacity:0.5;">FREQUENCY</small><br>{{rx.freq}}</div>
-                    </div>
-                </div>
-
-                <div ng-if="filteredHistory.length == 0" style="background:rgba(255,255,255,0.05); padding:30px; border-radius:15px; text-align:center; opacity:0.5;">
-                    No prescription history found for this patient.
-                </div>
-
-                <h3 style="margin-top:40px;">Clinical Observations</h3>
-                <div style="background:rgba(255,255,255,0.05); padding:20px; border-radius:15px;">
-                    <p style="margin:0; font-size:0.9rem; line-height:1.6;">
-                        Patient exhibits normal recovery patterns. No adverse reactions to current medication reported. 
-                        Recommend follow-up in 14 days.
-                    </p>
-                </div>
+                <div>{{p.email}}</div>
+                <small>ID: {{p._id}}</small>
             </div>
         </div>
     </div>
 
-    <script>
-        const app = angular.module('historyApp', []);
+    <!-- HISTORY -->
+    <div class="record-card">
 
-        app.controller('HistoryCtrl', function($scope) {
-            
-            // LOAD DATA FROM LOCAL STORAGE
-            $scope.init = function() {
-                // 1. Get Patients from the main dashboard data
-                const savedPatients = localStorage.getItem('medivise_patients');
-                $scope.patients = savedPatients ? JSON.parse(savedPatients) : [];
+        <div ng-if="!selectedPatient">
+            <h2>Select patient</h2>
+        </div>
 
-                // 2. Get EVERY prescription ever written
-                const savedRx = localStorage.getItem('docMedList');
-                $scope.fullArchive = savedRx ? JSON.parse(savedRx) : [];
-            };
+        <div ng-if="selectedPatient" class="scroll-area">
 
-            // SELECT AND FILTER
-            $scope.loadPatientHistory = function(patient) {
-                $scope.selectedPatient = patient;
+            <h2>{{selectedPatient.email}}</h2>
 
-                // Dynamic Filtering: Match prescriptions to this specific patient
-                // We match by name or ID to ensure the link is solid
-                $scope.filteredHistory = $scope.fullArchive.filter(function(item) {
-                    return item.patientName === patient.name || item.patientId === patient.id;
-                });
-            };
+            <h3>Prescriptions</h3>
 
-            // Start
-            $scope.init();
+            <div class="rx-card"
+                 ng-repeat="rx in filteredHistory">
+
+                <strong>{{rx.drugs.join(', ')}}</strong>
+
+                <div>Status: {{rx.status || 'pending'}}</div>
+
+            </div>
+
+            <div ng-if="filteredHistory.length == 0">
+                No data
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+const app = angular.module('historyApp', []);
+
+app.controller('HistoryCtrl', function($scope, $http) {
+
+    // INIT LOAD
+    $scope.init = function() {
+
+        // GET PATIENTS
+        $http.get('http://localhost:5000/doctor/patients', {
+            withCredentials: true
+        }).then(res => {
+            $scope.patients = res.data.data;
         });
-    </script>
+
+        // GET ALL PRESCRIPTIONS
+        $http.get('http://localhost:5000/doctor/all', {
+            withCredentials: true
+        }).then(res => {
+            $scope.fullArchive = res.data.data;
+        });
+    };
+
+    // FILTER HISTORY
+    $scope.loadPatientHistory = function(patient) {
+        $scope.selectedPatient = patient;
+
+        $scope.filteredHistory = $scope.fullArchive.filter(function(item) {
+            return item.userId === patient._id;
+        });
+    };
+
+    $scope.init();
+});
+</script>
+
 </body>
 </html>
