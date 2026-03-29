@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="mediViseApp">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise Alert | Notifications</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-blue: #5b7fff;
+            --success-green: #2ecc71;
+            --danger-red: #e74c3c;
+            --warning-yellow: #f1c40f;
+            --glass-bg: rgba(18, 25, 39, 0.85); /* Slightly darker for better contrast with image */
+            --border-color: rgba(46, 204, 113, 0.35); /* Subtle green glow */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            
+            /* ---ADDING PILL BACKGROUND FROM LOCAL PATH --- */
+            background-image: linear-gradient(rgba(13, 17, 23, 0.9), rgba(13, 17, 23, 0.9)), 
+                              url('E:/medivise/assets/img/pills.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* Parallax effect makes it feel like your images */
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 60px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+        }
+
+        .logo { font-size: 24px; font-weight: 600; color: white; }
+        .logo span { color: #8e9aaf; font-weight: 300; }
+
+        .nav-right { display: flex; gap: 10px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* --- ACTION BAR (Matching Image 3 styles) --- */
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            padding: 20px 60px;
+            justify-content: flex-end;
+        }
+
+        .btn-upload {
+            background: #4da6ff;
+            color: white; border: none;
+            padding: 10px 24px; border-radius: 12px;
+            font-weight: 600; cursor: pointer;
+        }
+
+        .btn-export {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px 24px; border-radius: 12px;
+            font-weight: 600; cursor: pointer;
+        }
+
+        /* --- MAIN GLASS CONTAINER --- */
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .glass-box {
+            width: 100%;
+            max-width: 900px;
+            background: var(--glass-bg);
+            border: 1.5px solid var(--border-color); 
+            border-radius: 30px;
+            padding: 40px;
+            backdrop-filter: blur(15px); /* Crucial for glassmorphism */
+            box-shadow: 0 0 40px rgba(46, 204, 113, 0.08);
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+
+        /* --- ALERT CARDS (Minimalist, no icons) --- */
+        .alert-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 18px;
+            padding: 20px 30px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
+        }
+
+        .alert-card:hover { 
+            background: rgba(255, 255, 255, 0.06); 
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .alert-info { flex: 1; }
+        
+        .type-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .text-critical { color: var(--danger-red); }
+        .text-warning { color: var(--warning-yellow); }
+        .text-reminder { color: var(--success-green); }
+
+        .alert-info h4 { margin: 0 0 5px 0; font-size: 17px; }
+        .alert-info p { margin: 0; font-size: 14px; opacity: 0.6; }
+
+        .time-label { font-size: 12px; opacity: 0.4; white-space: nowrap; margin-left: 20px; }
+
+        /* --- FILTER CHIPS (Matching Image 2 Step styles) --- */
+        .filter-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .chip {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .chip.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+    </style>
+</head>
+<body ng-controller="AlertsCtrl">
+
+    <nav class="navbar">
+        <div class="logo">MediVise <span>Alerts</span></div>
+        <div class="nav-right">
+            <button class="nav-btn" ng-click="navToDashboard()">Back to Dashboard</button>
+        </div>
+    </nav>
+
+    <div class="action-bar">
+        <button class="btn-upload">Upload Records</button>
+        <button class="btn-export">Export Report</button>
+    </div>
+
+    <div class="container">
+        <div class="glass-box">
+            
+            <h2 class="page-title">Notifications Center</h2>
+
+            <div class="filter-container">
+                <div class="chip" ng-class="{active: filterType == ''}" ng-click="filterType = ''">All Alerts</div>
+                <div class="chip" ng-class="{active: filterType == 'Critical'}" ng-click="filterType = 'Critical'">Critical</div>
+                <div class="chip" ng-class="{active: filterType == 'Warning'}" ng-click="filterType = 'Warning'">Risk Alerts</div>
+                <div class="chip" ng-class="{active: filterType == 'Reminder'}" ng-click="filterType = 'Reminder'">Reminders</div>
+            </div>
+
+            <div class="alert-list">
+                <div class="alert-card" ng-repeat="a in alerts | filter:{type: filterType}">
+                    
+                    <div class="alert-info">
+                        <span class="type-label" ng-class="'text-' + a.type.toLowerCase()">{{a.type}}</span>
+                        <h4>{{a.title}}</h4>
+                        <p>{{a.message}}</p>
+                    </div>
+
+                    <div class="time-label">{{a.time}}</div>
+                </div>
+
+                <div ng-if="(alerts | filter:{type: filterType}).length == 0" style="text-align: center; opacity: 0.3; padding: 40px;">
+                    <p>No new notifications in this category.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // AngularJS Module and Controller
+        const app = angular.module('mediViseApp', []);
+        app.controller('AlertsCtrl', function($scope) {
+            $scope.filterType = '';
+         
+    $scope.navToDashboard = function() {
+        window.location.href = 'patient.html';
+    };
+
+            
+            // JSON Alert Data structure
+            $scope.alerts = [
+                { type: 'Critical', title: 'Drug Interaction Detected', message: 'High risk detected between Warfarin and Aspirin.', time: '2 mins ago' },
+                { type: 'Reminder', title: 'Medication Time', message: 'It is time to take your Lisinopril 10mg dose.', time: '1 hour ago' },
+                { type: 'Warning', title: 'Heart Rate Alert', message: 'Pulse elevated after last dosage. Monitoring active.', time: '3 hours ago' },
+                { type: 'Reminder', title: 'Refill Warning', message: 'Your Metformin supply is running low (4 tabs left).', time: 'Yesterday' }
+            ];
+        });
+        
+    </script>
+</body>
+</html>
