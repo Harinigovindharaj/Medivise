@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>MediVise | Reports</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --card-bg: rgba(15, 23, 42, 0.85); --border: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
+        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+        .report-card { background: var(--card-bg); border: 1px solid var(--border); padding: 25px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-gen { background: #10b981; color: #000; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-gen:disabled { background: #444; color: #888; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2 style="color: var(--accent);">MediVise</h2>
+        <a href="admin.html" style="text-decoration:none; color:var(--accent); border:1px solid var(--accent); padding:10px; display:block; text-align:center; border-radius:5px;">← Dashboard</a>
+    </aside>
+
+    <main class="main-content">
+        <h1>System Reports</h1>
+        
+        <div class="report-card">
+            <div>
+                <h3>Monthly Drug Usage Report</h3>
+                <p style="color:var(--text-muted)">Summary of all dispensed compounds for the last 30 days.</p>
+            </div>
+            <button class="btn-gen" onclick="simulateReport(this)">Generate PDF</button>
+        </div>
+
+        <div class="report-card">
+            <div>
+                <h3>User Activity Audit</h3>
+                <p style="color:var(--text-muted)">Detailed log of administrator and doctor login sessions.</p>
+            </div>
+            <button class="btn-gen" onclick="simulateReport(this)">Generate CSV</button>
+        </div>
+    </main>
+
+    <script>
+        function simulateReport(btn) {
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+            
+            setTimeout(() => {
+                btn.innerText = "Downloading...";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    alert("Report generated successfully and saved to downloads.");
+                }, 1500);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

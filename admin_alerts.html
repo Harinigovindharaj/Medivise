@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>MediVise | Security</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --danger: #ef4444; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
+        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+        .alert-box { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .resolve-btn { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2 style="color: var(--accent);">MediVise</h2>
+        <a href="admin.html" style="color:var(--accent); text-decoration:none; border:1px solid var(--accent); padding:10px; display:block; text-align:center;">← Dashboard</a>
+    </aside>
+    <main class="main-content">
+        <h1>Critical Security Alerts</h1>
+        <div id="alertContainer">
+            <div class="alert-box">
+                <div><strong>Unauthorized IP Detected</strong><br><small>Attempt from 192.168.1.50</small></div>
+                <button class="resolve-btn" onclick="$(this).parent().fadeOut()">Dismiss</button>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

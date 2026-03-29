@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>MediVise | System Audit</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --border: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
+        .nav-back { padding: 12px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; }
+        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+        
+        .terminal { background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 20px; font-family: 'Courier New', monospace; height: 600px; overflow-y: auto; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .log-line { margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; animation: fadeIn 0.5s ease; }
+        .tag-info { color: #10b981; }
+        .tag-warn { color: #fbbf24; }
+        .tag-crit { color: #ef4444; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2 style="color: var(--accent);">MediVise</h2>
+        <a href="admin.html" class="nav-back">← Dashboard</a>
+    </aside>
+
+    <main class="main-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>Live Audit Stream</h1>
+            <span id="status" style="color:#10b981;">● SYSTEM LIVE</span>
+        </div>
+        <div class="terminal" id="logBox">
+            <div class="log-line"><span style="color:var(--accent)">[14:00:01]</span> <span class="tag-info">[INFO]</span> System Kernel Initialized.</div>
+        </div>
+    </main>
+
+    <script>
+        const activities = [
+            {t: "INFO", m: "User Admin modified 'Warfarin' dosage rules."},
+            {t: "WARN", m: "Multiple failed login attempts from IP 182.1.99.2."},
+            {t: "INFO", m: "Dr. Smith exported monthly report."},
+            {t: "CRIT", m: "Database connection spike detected in 'DrugRegistry'."},
+            {t: "INFO", m: "New pharmacist role created by System Admin."}
+        ];
+
+        function addLog() {
+            const act = activities[Math.floor(Math.random() * activities.length)];
+            const time = new Date().toLocaleTimeString();
+            const typeClass = act.t === 'CRIT' ? 'tag-crit' : (act.t === 'WARN' ? 'tag-warn' : 'tag-info');
+            
+            const html = `<div class="log-line">
+                <span style="color:var(--accent)">[${time}]</span> 
+                <span class="${typeClass}">[${act.t}]</span> ${act.m}
+            </div>`;
+            
+            $('#logBox').prepend(html);
+        }
+
+        setInterval(addLog, 3000); // Add a new log every 3 seconds
+    </script>
+</body>
+</html>

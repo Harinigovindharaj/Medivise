@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>MediVise | Drugs</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --border: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
+        .nav-back { padding: 12px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; }
+        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.03); border-radius: 10px; }
+        th, td { padding: 15px; border-bottom: 1px solid var(--border); text-align: left; }
+        .risk-high { color: #ef4444; font-weight: bold; }
+        .btn-add { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2 style="color: var(--accent);">MediVise</h2>
+        <a href="admin.html" class="nav-back">← Dashboard</a>
+    </aside>
+    <main class="main-content">
+        <h1>Drug Registry</h1>
+        <button class="btn-add" id="newDrug">+ Add New Compound</button>
+        <table>
+            <thead><tr><th>Compound Name</th><th>Dosage</th><th>Risk level</th><th>Actions</th></tr></thead>
+            <tbody id="drugList">
+                <tr><td>Warfarin</td><td>5mg</td><td><span class="risk-high">High</span></td><td><button>Edit</button> <button style="color:red" onclick="$(this).closest('tr').remove()">Remove</button></td></tr>
+            </tbody>
+        </table>
+    </main>
+    <script>
+        $('#newDrug').click(function(){
+            $('#drugList').append('<tr><td>New Drug</td><td>0mg</td><td>Low</td><td><button>Edit</button> <button style="color:red">Remove</button></td></tr>');
+        });
+    </script>
+</body>
+</html>
