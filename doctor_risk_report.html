@@ -146,19 +146,27 @@
 
     <script>
         const app = angular.module('clinicalApp', []);
-        app.controller('FinalCtrl', function($scope, $window) {
+
+        // Required to send session cookies to the Express backend
+        app.config(['$httpProvider', function($httpProvider) {
+            $httpProvider.defaults.withCredentials = true;
+        }]);
+
+        app.controller('FinalCtrl', function($scope, $window, $http) {
             $scope.step = 5;
-            $scope.riskScore = 82;
+            $scope.riskScore = 82; // In a real app, this would be calculated dynamically
             $scope.approvalNotes = "";
             $scope.isApproved = false;
+            
+            // Retrieve data from previous steps
             $scope.meds = JSON.parse(localStorage.getItem('docMedList') || '[]');
+            $scope.patient = JSON.parse(localStorage.getItem('current_patient') || '{}');
 
             $scope.recommendations = [
                 { title: 'Switch to Clopidogrel', desc: 'Alternative for high-bleeding-risk profiles.', applied: false },
                 { title: 'Taper Lisinopril', desc: 'Suggested reduction to 5mg based on renal data.', applied: false }
             ];
 
-            // Navigation Helpers
             $scope.setStep = function(n) { if(!$scope.isApproved) $scope.step = n; };
             $scope.applyRec = function(item) { item.applied = !item.applied; };
 
@@ -168,21 +176,52 @@
                 return '#10b981';
             };
 
-            $scope.printReport = function() { alert("Audit PDF generated and saved."); };
-            
+            // --- BACKEND INTEGRATION: SAVE TO DATABASE ---
+            $scope.finish = function() {
+                // Prepare the data to match your teammate's MongoDB Schema
+                // Since your schema handles one medication per entry, we map the list
+                const prescriptionData = {
+                    patientName: $scope.patient.name,
+                    patientAge: $scope.patient.age,
+                    patientId: $scope.patient.id,
+                    // Sending the first med's details (or you can loop to send multiple)
+                    name: $scope.meds[0].name,
+                    dose: $scope.meds[0].dose,
+                    freq: $scope.meds[0].freq,
+                    risk: $scope.riskScore,
+                    status: $scope.riskScore > 70 ? 'Critical' : 'Stable'
+                };
+
+                $http.post('http://localhost:5000/api/doctor/create', prescriptionData)
+                    .then(function(response) {
+                        if (response.data.success) {
+                            $scope.isApproved = true;
+                            
+                            // Let the dashboard know a new Rx was processed
+                            localStorage.setItem('last_processed_rx', JSON.stringify({
+                                patientName: $scope.patient.name,
+                                riskScore: $scope.riskScore
+                            }));
+                            
+                            // Increment local session count
+                            let count = parseInt(localStorage.getItem('session_rx_count') || '0');
+                            localStorage.setItem('session_rx_count', count + 1);
+                        }
+                    }, function(error) {
+                        console.error("Transmission failed:", error);
+                        alert("Database connection error. Please ensure the server is running.");
+                    });
+            };
+
+            $scope.goToDashboard = function() {
+                $window.location.href = 'doctor.html';
+            };
+
             $scope.goBackToInteraction = function() {
                 $window.location.href = 'docter_interaction.html';
             };
 
-            $scope.finish = function() {
-                // Set success state instead of alert/immediate redirect
-                $scope.isApproved = true;
-            };
-
-            $scope.goToDashboard = function() {
-                // Final navigation to the main doctor dashboard
-                $window.location.href = 'E:/medivise/views/doctor.html';
-            };
+            $scope.printReport = function() { alert("Audit PDF generated and saved."); };
         });
     </script>
 </body>
