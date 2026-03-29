@@ -118,59 +118,54 @@
         </div>
     </div>
 
-    <script>
-        const app = angular.module('historyApp', []);
+   <script>
+const app = angular.module('historyApp', []);
 
-        // Required to send session cookies to the Express backend
-        app.config(['$httpProvider', function($httpProvider) {
-            $httpProvider.defaults.withCredentials = true;
-        }]);
+app.config(['$httpProvider', function($httpProvider) {
+    $httpProvider.defaults.withCredentials = true;
+}]);
 
-        app.controller('HistoryCtrl', function($scope, $http) {
-            $scope.patients = [];
-            $scope.fullArchive = [];
+app.controller('HistoryCtrl', function($scope, $http) {
+    $scope.patients = [];
+    $scope.fullArchive = [];
 
-            // 1. FETCH ALL RECORDS FROM BACKEND
-            $scope.init = function() {
-                // Fetching from the route your teammate created
-                $http.get('http://localhost:5000/api/doctor/all')
-                    .then(function(response) {
-                        if (response.data.success) {
-                            // The 'data' from backend contains all prescription records
-                            $scope.fullArchive = response.data.data;
-                            
-                            // Extract unique patients from the prescription history
-                            // to populate the sidebar list automatically
-                            const uniquePatients = {};
-                            $scope.fullArchive.forEach(rx => {
-                                if(!uniquePatients[rx.patientName]) {
-                                    uniquePatients[rx.patientName] = {
-                                        name: rx.patientName,
-                                        id: rx.patientId || 'ID-REDACTED',
-                                        age: rx.patientAge || 'N/A'
-                                    };
-                                }
-                            });
-                            $scope.patients = Object.values(uniquePatients);
+    $scope.init = function() {
+        $http.get('http://localhost:5000/doctor/all')
+            .then(function(response) {
+                if (response.data.success) {
+                    $scope.fullArchive = response.data.data;
+
+                    const uniquePatients = {};
+
+                    $scope.fullArchive.forEach(rx => {
+                        const user = rx.userId || {};
+
+                        if (!uniquePatients[user._id]) {
+                            uniquePatients[user._id] = {
+                                name: user.email || "Unknown",
+                                id: user._id,
+                                age: user.age || 'N/A'
+                            };
                         }
-                    }, function(error) {
-                        console.error("Could not load archive:", error);
                     });
-            };
 
-            // 2. SELECT AND FILTER
-            $scope.loadPatientHistory = function(patient) {
-                $scope.selectedPatient = patient;
+                    $scope.patients = Object.values(uniquePatients);
+                }
+            }, function(error) {
+                console.error("Could not load archive:", error);
+            });
+    };
 
-                // Filter the global archive to only show rows for this specific patient
-                $scope.filteredHistory = $scope.fullArchive.filter(function(item) {
-                    return item.patientName === patient.name;
-                });
-            };
+    $scope.loadPatientHistory = function(patient) {
+        $scope.selectedPatient = patient;
 
-            // Run on load
-            $scope.init();
+        $scope.filteredHistory = $scope.fullArchive.filter(function(item) {
+            return item.userId && item.userId._id === patient.id;
         });
-    </script>
+    };
+
+    $scope.init();
+});
+</script>
 </body>
 </html>
