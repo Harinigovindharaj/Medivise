@@ -3,9 +3,12 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const mongoose = require("mongoose");
 const multer = require("multer");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
 /* -------- MULTER -------- */
 const storage = multer.diskStorage({
@@ -25,7 +28,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/test")
 
 /* -------- MODELS -------- */
 
-// ✅ Add more realistic user fields
+// Add more realistic user fields
 const User = mongoose.model("User", {
   email: String,
   password: String,

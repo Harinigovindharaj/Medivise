@@ -554,12 +554,12 @@ router.get("/researcher/export", isResearcher, async (req, res) => {
 const { exec } = require("child_process");
 
 router.post("/upload", upload.single("image"), async (req, res) => {
-  if (!req.session.userId) return res.send("Please login");
+  //if (!req.session.userId) return res.send("Please login");
   if (!req.file) return res.send("No file uploaded");
 
   const imagePath = req.file.path;
 
-  exec(`python src/ocr_runner.py "${imagePath}"`, async (error, stdout) => {
+  exec(`python ../ml-model/ocr_runner.py "${imagePath}"`, async (error, stdout) => {
     if (error) {
       console.error(error);
       return res.status(500).send("OCR failed");

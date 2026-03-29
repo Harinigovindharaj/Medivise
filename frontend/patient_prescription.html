@@ -131,14 +131,11 @@
 
     <script>
         const app = angular.module('patientApp', []);
-        app.controller('PatientCtrl', function($scope, $timeout) {
+        app.controller('PatientCtrl', function($scope, $timeout, $http) {
             $scope.step = 1;
             
             // Initial extracted data
-            $scope.medications = [
-                { name: "Aspirin", dose: "100mg", val: 45 },
-                { name: "Metformin", dose: "500mg", val: 80 }
-            ];
+            $scope.medications = [];
 
             let myChart = null;
 
@@ -184,31 +181,48 @@
 
             // Navigation: Next
             $scope.moveNext = function() {
-                if(!$('#fileInput').val()) {
+                const fileInput = document.getElementById('fileInput');
+
+                if (!fileInput.files.length) {
                     alert("Please select a prescription file first.");
-                } else {
-                    $scope.step = 2;
-                    $timeout($scope.updateChart, 100);
+                    return;
                 }
+
+                const formData = new FormData();
+                formData.append("image", fileInput.files[0]);
+
+                $http.post("http://localhost:5000/go/upload", formData, {
+                    headers: { "Content-Type": undefined }
+                })
+                .then(res => {
+                    $scope.medications = res.data.drugs;
+                    $scope.step = 2;
+
+                    setTimeout(() => $scope.updateChart(), 100);
+                })
+                .catch(err => {
+                    console.error("FULL ERROR:", err);
+                    alert("Upload failed: " + (err.data || err.statusText));
+                });
             };
 
             // Navigation: Dashboard Exit
            $scope.confirmExit = function() {
-    if(confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
-        // Updated to point to your actual dashboard filename
-        window.location.href = 'patient.html'; 
-    }
-};
+                if(confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
+                    // Updated to point to your actual dashboard filename
+                    window.location.href = 'patient.html'; 
+                }
+            };
 
             // Navigation: GO TO INTERACTION PAGE
             // Update the goToAnalysis function in patient_prescription.html
-$scope.goToAnalysis = function() {
-    localStorage.setItem('medList', JSON.stringify($scope.medications));
-    alert("Analyzing Interaction Risks...");
-    // Change 'interaction_analysis.html' to your actual file name:
-    window.location.href = 'patient_Interaction_Analyasis.html'; 
-};
-        });
+                $scope.goToAnalysis = function() {
+                    sessionStorage.setItem('medList', JSON.stringify($scope.medications));
+                    alert("Analyzing Interaction Risks...");
+                    // Change 'interaction_analysis.html' to your actual file name:
+                    window.location.href = 'patient_Interaction_Analyasis.html'; 
+                };
+            });
     </script>
 </body>
 </html>
