@@ -29,7 +29,7 @@ app.use(session({
 
 app.use((req, res, next) => {
   if (!req.session.userId) {
-    req.session.userId = new mongoose.Types.ObjectId(); // ✅ valid
+    req.session.userId = new mongoose.Types.ObjectId(); 
     req.session.role = "patient";
   }
   next();
