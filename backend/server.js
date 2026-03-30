@@ -1,3 +1,4 @@
+
 const express = require("express");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
@@ -91,17 +92,33 @@ const Drug = mongoose.model("Drug", {
   interactions: [String]
 });
 
+/* -------- SESSION -------- */
+app.use(session({
+  secret: "super_secret_key",
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: "mongodb://127.0.0.1:27017/test"
+  }),
+  cookie: {
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60
+  }
+}));
 
-// /* -------- INTERACTIONS (fallback only) -------- */
-// const interactions = [
-//   { drug1: "Paracetamol", drug2: "Ibuprofen", severity: "Low" },
-//   { drug1: "Aspirin", drug2: "Warfarin", severity: "High" },
-//   { drug1: "Metformin", drug2: "Alcohol", severity: "Medium" }
-// ];
+/* -------- INTERACTIONS (fallback only) -------- */
+const interactions = [
+  { drug1: "Paracetamol", drug2: "Ibuprofen", severity: "Low" },
+  { drug1: "Aspirin", drug2: "Warfarin", severity: "High" },
+  { drug1: "Metformin", drug2: "Alcohol", severity: "Medium" }
+];
 
 /* -------- ROUTES -------- */
-const goRoutes = require("./go.js")(User, Prescription, upload);
+
+const goRoutes = require("./go.js")(User, Prescription, upload, interactions);
 app.use("/go", goRoutes);
+const doctorRoutes = require("./routes/doctorRoutes.js")(Prescription);
+app.use("/doctor", doctorRoutes);
 
 /* -------- TEST -------- */
 app.get("/", (req, res) => {
