@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>MediVise | Users</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --border: rgba(255, 255, 255, 0.1); --card-bg: rgba(15, 23, 42, 0.9); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
+        .nav-back { padding: 12px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; font-weight: bold; }
+        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+        .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-main { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        table { width: 100%; background: var(--card-bg); border-radius: 12px; border-collapse: collapse; overflow: hidden; }
+        th, td { padding: 18px; text-align: left; border-bottom: 1px solid var(--border); }
+        .btn-edit { color: var(--accent); background: none; border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-del { color: #ef4444; background: none; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2 style="color: var(--accent);">MediVise</h2>
+        <a href="admin.html" class="nav-back">← Back to Dashboard</a>
+    </aside>
+    <main class="main-content">
+        <div class="action-header">
+            <h1>User Management</h1>
+            <button class="btn-main" id="addUser">+ Add New User</button>
+        </div>
+        <table>
+            <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="userTable">
+                <tr>
+                    <td><strong>Dr. Julian Bashir</strong></td>
+                    <td>Doctor</td>
+                    <td style="color:#10b981;">Active</td>
+                    <td><button class="btn-edit">Edit</button><button class="btn-del">Remove</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+    <script>
+        $(document).on('click', '.btn-del', function() { if(confirm("Delete user?")) $(this).closest('tr').remove(); });
+        $('#addUser').click(function() { 
+            $('#userTable').append(`<tr><td><strong>New Staff</strong></td><td>Nurse</td><td style="color:#10b981;">Pending</td><td><button class="btn-edit">Edit</button><button class="btn-del">Remove</button></td></tr>`);
+        });
+    </script>
+</body>
+</html>

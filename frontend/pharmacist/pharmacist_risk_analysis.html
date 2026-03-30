@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="pharmacyApp">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Clinical Risk Analysis</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --accent: #38bdf8; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --glass: rgba(15, 23, 42, 0.95); --border: rgba(255, 255, 255, 0.1); 
+        }
+
+        body {
+            margin: 0; font-family: 'Inter', sans-serif; color: #f1f5f9;
+            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), 
+                        url('../assets/img/pharmacist-bg.png') no-repeat center center fixed;
+            background-size: cover; min-height: 100vh;
+        }
+
+        /* External Navigation Bar */
+        .nav-header {
+            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px);
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .btn-back-dash {
+            color: var(--accent); text-decoration: none; font-size: 0.85rem; 
+            font-weight: 700; border: 1px solid var(--accent); padding: 8px 15px; border-radius: 6px;
+            transition: 0.3s;
+        }
+        .btn-back-dash:hover { background: var(--accent); color: #0f172a; }
+
+        /* Main Layout */
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        
+        .analysis-card {
+            background: var(--glass); border-radius: 24px; border: 1px solid var(--border);
+            padding: 40px; backdrop-filter: blur(20px); box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        /* 4. Interaction Section */
+        .interaction-box {
+            background: rgba(239, 68, 68, 0.1); border-left: 5px solid var(--danger);
+            padding: 20px; border-radius: 8px; margin-bottom: 30px;
+        }
+
+        /* 5. Risk Score Visualization */
+        .risk-container {
+            display: flex; align-items: center; justify-content: space-around;
+            padding: 30px; background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px solid var(--border);
+        }
+
+        .risk-gauge {
+            width: 150px; height: 150px; border-radius: 50%; border: 12px solid var(--danger);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.3); animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Footer Navigation */
+        .workflow-nav {
+            margin-top: 40px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .btn-nav {
+            padding: 15px 35px; border-radius: 10px; font-weight: 700; cursor: pointer;
+            text-decoration: none; transition: 0.3s; font-family: inherit;
+        }
+
+        .btn-prev { background: transparent; border: 1px solid var(--border); color: white; }
+        .btn-next { background: var(--success); border: none; color: white; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); }
+        .btn-next:hover { transform: translateY(-3px); background: white; color: #0f172a; }
+
+    </style>
+</head>
+<body ng-controller="RiskCtrl">
+
+    <nav class="nav-header">
+        <a href="file:///E:/medivise/views/pharmacist.html" class="btn-back-dash">← EXIT TO DASHBOARD</a>
+        <div style="text-align: center;">
+            <strong style="letter-spacing: 2px; display: block;">CLINICAL RISK ENGINE</strong>
+            <small style="opacity: 0.5;">Step 4 & 5: Safety Validation</small>
+        </div>
+        <div style="width: 150px; text-align: right;">
+            <span class="status-pill" style="color: var(--danger);">● HIGH ALERT</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="analysis-card">
+            
+            <section>
+                <h3 style="margin-top: 0; color: var(--accent);">4. Drug Interaction Analysis</h3>
+                <p style="opacity: 0.7; font-size: 0.9rem;">The system has detected potential chemical conflicts between current medications.</p>
+                
+                <div class="interaction-box">
+                    <strong style="color: var(--danger); font-size: 1.1rem;"> Severe Interaction Detected</strong>
+                    <p style="margin: 10px 0 0 0; line-height: 1.6;">
+                        <strong>{{activeRx.drugA}}</strong> + <strong>{{activeRx.drugB}}</strong>:<br>
+                        {{activeRx.interactionDetail}}
+                    </p>
+                </div>
+            </section>
+
+            <hr style="opacity: 0.1; margin: 40px 0;">
+
+            <section>
+                <h3 style="color: var(--accent);">5. Risk Score & Patient Safety</h3>
+                <div class="risk-container">
+                    <div class="risk-gauge">
+                        <span style="font-size: 3rem; font-weight: 900;">{{activeRx.riskScore}}</span>
+                        <small style="font-weight: 700; letter-spacing: 1px;">CRITICAL</small>
+                    </div>
+                    <div style="max-width: 400px;">
+                        <h4 style="margin: 0 0 10px 0;">Safety Evaluation</h4>
+                        <p style="font-size: 0.9rem; opacity: 0.8; line-height: 1.5;">
+                            {{activeRx.safetyNote}}
+                        </p>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <span style="background: rgba(245, 158, 11, 0.2); color: var(--warning); padding: 5px 12px; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">RENAL IMPACT</span>
+                            <span style="background: rgba(239, 68, 68, 0.2); color: var(--danger); padding: 5px 12px; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">TOXICITY RISK</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="workflow-nav">
+                <a href="file:///E:/medivise/views/pharmacist_verify.html" class="btn-nav btn-prev">← Back to Step 3</a>
+                
+                <div style="text-align: right;">
+                    <small style="display: block; opacity: 0.5; margin-bottom: 10px;">I confirm I have reviewed these risks</small>
+                    <a href="file:///E:/medivise/views/pharmacist_approve.html" class="btn-nav btn-next">Proceed to Final Approval →</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        angular.module('pharmacyApp', []).controller('RiskCtrl', function($scope) {
+            // Mock data representing a high-risk clinical case
+            $scope.activeRx = {
+                id: 'RX-9901',
+                drugA: 'Warfarin',
+                drugB: 'Aspirin',
+                interactionDetail: 'Concurrent use may significantly increase the risk of major bleeding. The combination enhances anti-platelet and anti-coagulant effects.',
+                riskScore: 94,
+                safetyNote: 'Patient has a history of GI bleeding. Proceeding with this combination requires mandatory dose adjustment or clinical override justification.'
+            };
+        });
+    </script>
+</body>
+</html>

@@ -297,6 +297,14 @@
                 <div>{{results.dosage ? 'FLAG' : 'PASS'}}</div>
             </div>
 
+            <div class="validation-row v-warn" ng-if="aiSuggestions.length > 0">
+                <div>
+                    <strong>System Suggestions</strong><br>
+                    <small ng-repeat="s in aiSuggestions">{{s}}<br></small>
+                </div>
+                <div>HINT</div>
+            </div>
+
             <div style="display: flex; justify-content: space-between; margin-top: 40px;">
                 <button class="btn btn-outline" ng-click="changeStep(2)">Modify Prescription</button>
                 <button class="btn btn-primary" ng-click="finalize()">Finalize Analysis</button>
@@ -306,10 +314,18 @@
 
     <script>
         const app = angular.module('doctorApp', []);
-        app.controller('DoctorCtrl', function($scope) {
+
+        // Allow cookies for authentication middleware
+        app.config(['$httpProvider', function($httpProvider) {
+            $httpProvider.defaults.withCredentials = true;
+        }]);
+
+        app.controller('DoctorCtrl', function($scope, $http, $window) {
             $scope.step = 1;
             $scope.showReg = false;
             $scope.newPatient = {};
+            $scope.apiBase = '/api/doctor'; 
+            $scope.aiSuggestions = [];
 
             const savedData = localStorage.getItem('medivise_patients');
             $scope.patients = savedData ? JSON.parse(savedData) : [
@@ -350,6 +366,7 @@
                 }
             };
 
+            // Backend Integrated Validation
             $scope.runValidation = function() {
                 const medNames = $scope.currentPrescription.map(m => (m.name || '').toLowerCase().trim());
                 const patientAllergy = ($scope.selectedPatient.allergy || '').toLowerCase().trim();
@@ -358,17 +375,47 @@
                     allergy: patientAllergy !== 'none' && medNames.includes(patientAllergy),
                     dosage: $scope.currentPrescription.some(m => m.dose > 1000)
                 };
-                $scope.step = 3;
+
+                // Create prescription in DB
+                $http.post($scope.apiBase + '/create', {
+                    drugs: $scope.currentPrescription 
+                }).then(function(response) {
+                    if (response.data.success) {
+                        $scope.activePrescriptionId = response.data.data._id;
+                        // Get AI suggestions
+                        return $http.get($scope.apiBase + '/suggestions/' + $scope.activePrescriptionId);
+                    }
+                }).then(function(sugResponse) {
+                    if (sugResponse) $scope.aiSuggestions = sugResponse.data.data.suggestions;
+                    $scope.step = 3;
+                }).catch(function(err) {
+                    console.error("Auth/Connection error:", err);
+                    $scope.step = 3; // Fallback to local validation UI even if API fails
+                });
             };
 
+            // Backend Integrated Approval
             $scope.finalize = function() {
-                localStorage.setItem('docMedList', JSON.stringify($scope.currentPrescription));
-                // Update local storage so dashboard knows about the action
-                localStorage.setItem('last_processed_rx', JSON.stringify({
-                    patientName: $scope.selectedPatient.name,
-                    riskScore: $scope.results.allergy ? 95 : ($scope.results.dosage ? 45 : 15)
-                }));
-                window.location.href = 'docter_interaction.html';
+                const approveAction = function() {
+                    localStorage.setItem('docMedList', JSON.stringify($scope.currentPrescription));
+                    localStorage.setItem('last_processed_rx', JSON.stringify({
+                        patientName: $scope.selectedPatient.name,
+                        riskScore: $scope.results.allergy ? 95 : ($scope.results.dosage ? 45 : 15)
+                    }));
+                    $window.location.href = 'docter_interaction.html';
+                };
+
+                if ($scope.activePrescriptionId) {
+                    $http.post($scope.apiBase + '/approve', {
+                        prescriptionId: $scope.activePrescriptionId
+                    }).then(approveAction)
+                    .catch(function(err) {
+                        alert("Session expired or unauthorized. Saving locally.");
+                        approveAction();
+                    });
+                } else {
+                    approveAction();
+                }
             };
         });
     </script>

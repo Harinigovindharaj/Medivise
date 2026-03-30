@@ -180,75 +180,53 @@
     <script>
         const app = angular.module('doctorDashboard', []);
 
-        app.controller('DocCtrl', function($scope, $window) {
-            // Initial data template
-            const defaultPatients = [
-                { id: 'MD-0192', name: 'Johnathan Doe', age: 45, status: 'Stable', risk: 12, lastAction: 'Routine Checkup' },
-                { id: 'MD-0882', name: 'Clarissa Smith', age: 31, status: 'Critical', risk: 89, lastAction: 'Emergency Admission' },
-                { id: 'MD-0441', name: 'Bruce Banner', age: 52, status: 'Stable', risk: 05, lastAction: 'Labs Updated' },
-                { id: 'MD-0229', name: 'Wanda Maximoff', age: 29, status: 'Stable', risk: 24, lastAction: 'Follow-up' },
-                { id: 'MD-0910', name: 'Arthur Curry', age: 38, status: 'Critical', risk: 76, lastAction: 'Blood Pressure Alert' }
-            ];
+        // This allows the frontend to send session cookies to your Express backend
+        app.config(['$httpProvider', function($httpProvider) {
+            $httpProvider.defaults.withCredentials = true;
+        }]);
 
-            // 1. DYNAMIC DATA LOADING
+        app.controller('DocCtrl', function($scope, $window, $http) {
+            $scope.patients = [];
+            $scope.totalRx = 0;
+
+            // 1. CONNECT TO BACKEND: Fetch all prescriptions/patients
             $scope.init = function() {
-                const savedData = localStorage.getItem('medivise_patients');
-                if (savedData) {
-                    $scope.patients = JSON.parse(savedData);
-                } else {
-                    $scope.patients = defaultPatients;
-                    $scope.save();
-                }
-
-                // Check if a prescription was just finished (from your Final Review page)
-                const lastRx = localStorage.getItem('last_processed_rx');
-                if (lastRx) {
-                    const rxData = JSON.parse(lastRx);
-                    $scope.updatePatientAfterRx(rxData);
-                }
-
-                $scope.totalRx = parseInt(localStorage.getItem('session_rx_count') || '0');
+                // Calling the router.get("/all") route from your Express code
+                $http.get('http://localhost:5000/api/doctor/all') 
+                    .then(function(response) {
+                        if (response.data.success) {
+                            // Map backend data to your table
+                            $scope.patients = response.data.data; 
+                            $scope.totalRx = response.data.count;
+                        }
+                    }, function(error) {
+                        console.error("Backend Connection Failed:", error);
+                        // Fallback to empty list if server is not running
+                        $scope.patients = [];
+                    });
             };
 
-            // 2. UPDATE LOGIC AFTER NEW PRESCRIPTION
-            $scope.updatePatientAfterRx = function(rxData) {
-                let found = false;
-                $scope.patients.forEach(p => {
-                    if (p.name === rxData.patientName) {
-                        p.risk = rxData.riskScore;
-                        p.status = rxData.riskScore > 70 ? 'Critical' : 'Stable';
-                        p.lastAction = 'Rx Transmitted: ' + new Date().toLocaleTimeString();
-                        found = true;
-                    }
-                });
-                
-                if (found) {
-                    localStorage.removeItem('last_processed_rx'); // Clear the "notification"
-                    $scope.save();
-                }
-            };
-
+            // 2. START PRESCRIPTION: Bridge to the next page
             $scope.startPrescription = function(patient) {
-                // Store selected patient so the prescription page knows who we are treating
+                // We save to localStorage ONLY to tell the next page which patient was picked
                 localStorage.setItem('current_patient', JSON.stringify(patient));
                 $window.location.href = 'docter_prescription.html';
             };
 
+            // 3. UI HELPERS (Unchanged logic)
             $scope.getRiskColor = function(risk) {
+                if (!risk || risk < 30) return '#2ecc71';
                 if (risk > 70) return '#ff4d4d';
-                if (risk > 30) return '#f59e0b';
-                return '#2ecc71';
-            };
-
-            $scope.save = function() {
-                localStorage.setItem('medivise_patients', JSON.stringify($scope.patients));
+                return '#f59e0b';
             };
 
             $scope.resetDemo = function() {
-                localStorage.clear();
-                $window.location.reload();
+                // In a real backend, you'd call a 'delete' route, 
+                // but for now, we just refresh the view
+                $scope.init();
             };
 
+            // Initialize on load
             $scope.init();
         });
     </script>

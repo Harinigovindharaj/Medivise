@@ -144,25 +144,38 @@
 
     <script>
         const app = angular.module('interactionApp', []);
-        app.controller('InteractionCtrl', function($scope, $timeout) {
+        
+        // Connect to backend session
+        app.config(['$httpProvider', function($httpProvider) {
+            $httpProvider.defaults.withCredentials = true;
+        }]);
+
+        app.controller('InteractionCtrl', function($scope, $timeout, $http) {
             $scope.loading = true;
             
-            // 1. Data Retrieval (Internal Navigation)
-            const rawData = localStorage.getItem('finalMedList');
+            // 1. DATA FIX: Use 'docMedList' to match the prescription page
+            const rawData = localStorage.getItem('docMedList');
             $scope.medList = rawData ? JSON.parse(rawData) : [];
+            
+            // Get patient info for context
+            $scope.patient = JSON.parse(localStorage.getItem('current_patient') || '{}');
 
-            // 2. Simulated AI "Processing" Delay
+            // 2. Simulated Clinical Analysis Delay
+            // This gives the "AI scanner" effect time to work
             $timeout(function() {
-                $scope.loading = false;
                 $scope.runClinicalCheck();
-            }, 3000);
+                $scope.loading = false;
+            }, 2500);
 
-            // 3. Expanded Interaction Logic (Additional Checks)
+            // 3. Clinical Logic
             $scope.runClinicalCheck = function() {
-                const names = $scope.medList.map(m => m.name.toLowerCase());
+                // Ensure we have a list to work with
+                if (!$scope.medList || $scope.medList.length === 0) return;
+
+                const names = $scope.medList.map(m => (m.name || '').toLowerCase().trim());
                 $scope.interactions = [];
 
-                // Check A: Aspirin + Warfarin
+                // Check A: Aspirin + Warfarin (Anticoagulant Risk)
                 if(names.includes('aspirin') && names.includes('warfarin')) {
                     $scope.interactions.push({
                         pair: "Aspirin + Warfarin",
@@ -171,8 +184,8 @@
                     });
                 }
 
-                // Check B: Metformin + Contrast Dye (Simulation)
-                if(names.includes('metformin') && names.includes('iodine')) {
+                // Check B: Metformin + Iodine (Lactic Acidosis Risk)
+                if(names.includes('metformin') && (names.includes('iodine') || names.includes('contrast'))) {
                     $scope.interactions.push({
                         pair: "Metformin + Iodine Contrast",
                         severity: "High",
@@ -180,12 +193,12 @@
                     });
                 }
 
-                // Check C: Statin + Grapefruit (Simulation)
-                if(names.includes('atorvastatin') && names.includes('grapefruit')) {
+                // Check C: Allergy Detection (Integration with Patient Data)
+                if($scope.patient.allergy && names.includes($scope.patient.allergy.toLowerCase())) {
                     $scope.interactions.push({
-                        pair: "Atorvastatin + Grapefruit",
-                        severity: "Moderate",
-                        desc: "CYP3A4 inhibition increases statin serum levels, raising risk of myopathy."
+                        pair: "Patient Allergy Conflict",
+                        severity: "High",
+                        desc: "Patient is documented as allergic to " + $scope.patient.allergy + ". Immediate intervention required."
                     });
                 }
 
@@ -195,14 +208,24 @@
                     $scope.interactions.push({
                         pair: "Redundant Therapy",
                         severity: "Moderate",
-                        desc: "Multiple medications from the same class detected. Risk of cumulative toxicity."
+                        desc: "Multiple medications of the same type detected. Risk of cumulative toxicity."
                     });
                 }
             };
 
-            // 4. Proceed to Risk Report (Next Page)
+            // 4. Save and Move to Final Report
             $scope.proceed = function() {
+                // Save interactions so the Risk Report page can display them
                 localStorage.setItem('activeInteractions', JSON.stringify($scope.interactions));
+                
+                // Calculate a basic risk score based on severity
+                let score = 15; // Base score
+                $scope.interactions.forEach(i => {
+                    score += (i.severity === 'High' ? 35 : 15);
+                });
+                if(score > 100) score = 100;
+                
+                localStorage.setItem('calculatedRiskScore', score);
                 window.location.href = 'doctor_risk_report.html';
             };
         });
