@@ -1,11 +1,13 @@
 
 const express = require("express");
+
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const mongoose = require("mongoose");
 const multer = require("multer");
 
 const app = express();
+app.use(express.static("public"));
 app.use(express.json());
 
 /* -------- MULTER -------- */
