@@ -109,17 +109,17 @@ app.use(session({
 }));
 
 /* -------- INTERACTIONS (fallback only) -------- */
-const interactions = [
-  { drug1: "Paracetamol", drug2: "Ibuprofen", severity: "Low" },
-  { drug1: "Aspirin", drug2: "Warfarin", severity: "High" },
-  { drug1: "Metformin", drug2: "Alcohol", severity: "Medium" }
-];
+// const interactions = [
+//   { drug1: "Paracetamol", drug2: "Ibuprofen", severity: "Low" },
+//   { drug1: "Aspirin", drug2: "Warfarin", severity: "High" },
+//   { drug1: "Metformin", drug2: "Alcohol", severity: "Medium" }
+// ];
 
 /* -------- ROUTES -------- */
 
-const goRoutes = require("./go.js")(User, Prescription, upload, interactions);
+const goRoutes = require("./go.js")(User, Prescription, upload);
 app.use("/go", goRoutes);
-const doctorRoutes = require("./routes/doctorRoutes.js")(Prescription);
+const doctorRoutes = require("./doctorRoutes.js")(Prescription);
 app.use("/doctor", doctorRoutes);
 
 /* -------- TEST -------- */
