@@ -7,7 +7,9 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 
 const app = express();
-app.use(express.static("public"));
+const path = require("path");
+
+app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
 /* -------- MULTER -------- */
