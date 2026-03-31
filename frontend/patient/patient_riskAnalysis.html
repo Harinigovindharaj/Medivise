@@ -1,355 +1,294 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="riskApp">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MediVise | Advanced Risk Analysis And Recommendations</title>
-    
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <title>MediVise | Clinical Risk Analysis</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1; --success: #2dd4bf; --danger: #f43f5e; --warning: #fbbf24;
-            --glass: rgba(15, 23, 42, 0.95);
+            --accent: #38bdf8; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --glass: rgba(15, 23, 42, 0.95); --border: rgba(255, 255, 255, 0.1);
         }
 
         body {
-            margin: 0; font-family: 'Inter', sans-serif;
-            background: linear-gradient(rgba(15,23,42,0.9), rgba(15,23,42,0.9)), url('E:/medivise/assets/img/pills.jpg');
-            background-size: cover; background-attachment: fixed; color: white;
-            min-height: 100vh;
+            margin: 0; font-family: 'Inter', sans-serif; color: #f1f5f9;
+            background: linear-gradient(rgba(15,23,42,0.9), rgba(15,23,42,0.9)),
+                        url('../assets/pharmacist-bg.png') no-repeat center center fixed;
+            background-size: cover; min-height: 100vh;
         }
 
-        .navbar {
-            background: rgba(0, 0, 0, 0.5); padding: 15px 50px;
+        .nav-header {
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .btn-back {
+            color: var(--accent); text-decoration: none; font-size: 0.85rem;
+            font-weight: 700; border: 1px solid var(--accent); padding: 8px 15px;
+            border-radius: 6px; transition: 0.3s;
+        }
+        .btn-back:hover { background: var(--accent); color: #0f172a; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+
+        .analysis-card {
+            background: var(--glass); border-radius: 24px; border: 1px solid var(--border);
+            padding: 40px; backdrop-filter: blur(20px);
+        }
+
+        .interaction-box {
+            background: rgba(239,68,68,0.1); border-left: 5px solid var(--danger);
+            padding: 20px; border-radius: 8px; margin-bottom: 15px;
+        }
+        .interaction-box.moderate {
+            background: rgba(245,158,11,0.1); border-left-color: var(--warning);
+        }
+        .interaction-box.low {
+            background: rgba(16,185,129,0.1); border-left-color: var(--success);
+        }
+
+        .risk-container {
+            display: flex; align-items: center; justify-content: space-around;
+            padding: 30px; background: rgba(255,255,255,0.03); border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .risk-gauge {
+            width: 150px; height: 150px; border-radius: 50%; border: 12px solid var(--danger);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            animation: pulse 2s infinite; flex-shrink: 0;
+        }
+        .risk-gauge.moderate { border-color: var(--warning); }
+        .risk-gauge.low      { border-color: var(--success); animation: none; }
+
+        @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
+
+        .factor-row {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 13px;
         }
-        
-        .nav-btn {
-            background: #1e293b; border: 1px solid #334155; color: white;
-            padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: 0.3s;
-        }
-        .nav-btn:hover { background: #334155; }
-
-        .container { max-width: 1000px; margin: 40px auto; padding: 20px; }
-        
-        .glass-card { 
-            background: var(--glass); border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 25px; padding: 40px; backdrop-filter: blur(20px);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-            min-height: 400px;
+        .factor-bar {
+            height: 4px; background: var(--danger); border-radius: 2px;
+            min-width: 4px; max-width: 120px;
         }
 
-        .step-bar { display: flex; gap: 10px; margin-bottom: 30px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 15px; }
-        .step-link { flex: 1; text-align: center; padding: 12px; border-radius: 10px; opacity: 0.4; transition: 0.4s; font-size: 0.9rem; }
-        .step-link.active { opacity: 1; background: var(--primary); font-weight: bold; transform: scale(1.02); }
-
-        .risk-score { font-size: 4rem; font-weight: 900; color: var(--danger); text-shadow: 0 0 20px rgba(244, 63, 94, 0.4); }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; padding: 15px; border-bottom: 2px solid rgba(255,255,255,0.1); opacity: 0.6; }
-        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .alt-row:hover { background: rgba(99, 102, 241, 0.1); cursor: pointer; }
-        .selected-drug { background: rgba(45, 212, 191, 0.15) !important; border-left: 4px solid var(--success); }
-
-        .footer-nav { 
-            margin-top: 40px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); 
-            display: flex; justify-content: space-between; 
+        .food-tag {
+            display: inline-block; background: rgba(245,158,11,0.15); color: var(--warning);
+            border: 1px solid rgba(245,158,11,0.3); padding: 4px 10px;
+            border-radius: 4px; font-size: 12px; margin: 4px;
         }
-        .btn { border: none; padding: 14px 28px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
-        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; }
-        .btn-outline:hover { background: rgba(255,255,255,0.1); }
-        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-
-        .loader {
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-left-color: var(--primary);
-            border-radius: 50%; width: 40px; height: 40px;
-            animation: spin 1s linear infinite; margin: 15% auto 20px;
+        .alt-tag {
+            display: inline-block; background: rgba(56,189,248,0.1); color: var(--accent);
+            border: 1px solid rgba(56,189,248,0.2); padding: 4px 10px;
+            border-radius: 4px; font-size: 12px; margin: 4px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .workflow-nav {
+            margin-top: 40px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn-nav {
+            padding: 15px 35px; border-radius: 10px; font-weight: 700; cursor: pointer;
+            text-decoration: none; transition: 0.3s; font-family: inherit; border: none;
+        }
+        .btn-prev { background: transparent; border: 1px solid var(--border); color: white; }
+        .btn-next { background: var(--success); color: white; }
+        .btn-next:hover { background: white; color: #0f172a; transform: translateY(-2px); }
+
+        .loading { text-align: center; padding: 60px; color: var(--accent); opacity: 0.7; }
     </style>
 </head>
-<body ng-controller="RiskCtrl">
+<body>
 
-    <nav class="navbar">
-        <h2 style="margin:0; color: var(--primary);">MediVise <span style="font-weight: 200; color: white;">Risk Intelligence</span></h2>
-        <button class="nav-btn" ng-click="navToDashboard()">Back to Dashboard</button>
+    <nav class="nav-header">
+        <a href="pharmacist.html" class="btn-back">← EXIT TO DASHBOARD</a>
+        <div style="text-align:center;">
+            <strong style="letter-spacing:2px;display:block;">CLINICAL RISK ENGINE</strong>
+            <small style="opacity:0.5;">Step 4 & 5: Safety Validation</small>
+        </div>
+        <div style="width:150px;text-align:right;">
+            <span id="alert-label" style="color:var(--danger);">● LOADING</span>
+        </div>
     </nav>
 
     <div class="container">
-        <div class="step-bar">
-            <div class="step-link" ng-class="{active: currentTab == 'risk'}">1. Risk Profile</div>
-            <div class="step-link" ng-class="{active: currentTab == 'recom'}">2. AI Alternatives</div>
-            <div class="step-link" ng-class="{active: currentTab == 'report'}">3. Clinical Report</div>
-        </div>
-
-        <div class="glass-card fade-in">
-            
-            <div ng-if="loading">
-                <div class="loader"></div>
-                <p style="text-align:center; opacity:0.6; font-weight: 300;">Simulating pharmacological impact...</p>
+        <div class="analysis-card">
+            <div id="risk-content">
+                <div class="loading">Fetching clinical risk data...</div>
             </div>
-
-            <div ng-if="!loading && currentTab == 'risk'" class="fade-in">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2 style="margin:0">Interaction Risk Score</h2>
-                        <p style="opacity: 0.6;">Biochemical conflict probability: <b style="color:var(--danger)">{{analytics.severity}}</b></p>
-                    </div>
-                    <div class="risk-score">{{ analytics.score }}%</div>
-                </div>
-
-                <div style="margin: 30px 0; height: 260px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05);">
-                    <canvas id="riskTrendChart"></canvas>
-                </div>
-
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                    <div style="padding:15px; border-radius:12px; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3);">
-                        <small style="opacity:0.6">Severity</small><br><b>{{ analytics.severity }}</b>
-                    </div>
-                    <div style="padding:15px; border-radius:12px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
-                        <small style="opacity:0.6">Category</small><br><b>{{ analytics.category }}</b>
-                    </div>
-                    <div style="padding:15px; border-radius:12px; background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.3);">
-                        <small style="opacity:0.6">Reliability</small><br><b>{{ analytics.reliability }}%</b>
-                    </div>
-                </div>
-            </div>
-
-            <div ng-if="!loading && currentTab == 'recom'" class="fade-in">
-                <h2>Suggested Adjustments</h2>
-                <p style="opacity: 0.6;">The AI has identified safer clinical alternatives based on your profile.</p>
-
-                <table>
-                    <thead>
-                        <tr><th>Current Drug</th><th>AI Recommendation</th><th>Clinical Benefit</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr class="alt-row" ng-repeat="alt in alternatives" ng-click="selectDrug($index)" ng-class="{'selected-drug': alt.selected}">
-                            <td>{{alt.original}}</td>
-                            <td style="color:var(--success)"><b>{{alt.suggested}}</b></td>
-                            <td><small>{{alt.reason}}</small></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p style="margin-top: 20px; font-size: 0.85rem; color: var(--warning);">* Select a recommendation to include it in the final report.</p>
-            </div>
-
-            <div ng-if="!loading && currentTab == 'report'" class="fade-in">
-                <div style="text-align:center; padding: 10px;">
-                    <h2 style="margin-bottom: 5px;">Final Clinical Assessment</h2>
-                    <p style="opacity: 0.6; margin-top: 0;">Verified for Patient Review</p>
-                </div>
-
-                <div style="background: white; color: #1e293b; padding: 30px; border-radius: 15px; margin: 20px 0; border-left: 8px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                    <h4 style="margin-top:0; text-transform: uppercase; color: #64748b; letter-spacing: 1px;">Clinical Summary</h4>
-                    <p style="line-height: 1.6;">
-                        High-fidelity analysis indicates a <b>{{ analytics.score }}%</b> probability of adverse drug reactions. 
-                        To mitigate this, a switch from <b>{{ getSelected().original }}</b> to <b>{{ getSelected().suggested }}</b> is strongly advised to maintain therapeutic efficacy while reducing bleeding risks.
-                    </p>
-                    <hr style="opacity:0.1; margin: 20px 0;">
-                    <div style="display:flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8;">
-                        <span>Ref ID: #MV-RECOVERY-2026</span>
-                        <span>Generated: {{todayDate}}</span>
-                    </div>
-                </div>
-
-                <div style="display:flex; gap: 15px; justify-content: center; margin-top: 30px;">
-                    <button class="btn btn-primary" ng-click="downloadReport()">Download PDF Report</button>
-                    <button class="btn btn-outline" ng-click="emailReport()">Forward to Primary Care</button>
-                </div>
-            </div>
-
-            <div class="footer-nav" ng-if="!loading">
-                <button class="btn btn-outline" ng-click="prevStep()" ng-show="currentTab != 'risk'">
-                    ← Previous Step
-                </button>
-                <div ng-show="currentTab == 'risk'"></div> 
-                <button class="btn btn-primary" ng-click="nextStep()" ng-show="currentTab != 'report'">
-                    Next: {{ currentTab == 'risk' ? 'View Recommendations' : 'Generate Report' }} →
-                </button>
-            </div>
-
         </div>
     </div>
 
     <script>
-        const app = angular.module('riskApp', []);
-        app.controller('RiskCtrl', function($scope, $timeout) {
-            
-            $scope.tabs = ['risk', 'recom', 'report'];
-            $scope.currentTab = 'risk';
-            $scope.loading = true;
-            $scope.todayDate = new Date().toLocaleDateString();
+    const API = "http://localhost:5000/pharmacist";
+    const params = new URLSearchParams(window.location.search);
+    const rxId   = params.get("id");
 
-            $scope.analytics = {};
-            $scope.alternatives = [];
+    function severityColor(sev) {
+        if (!sev) return "var(--accent)";
+        const s = sev.toLowerCase();
+        if (s === "high")     return "var(--danger)";
+        if (s === "moderate") return "var(--warning)";
+        return "var(--success)";
+    }
 
-            // Backend Processing
-            $scope.fetchBackendData = function() {
-                const prescriptionId = sessionStorage.getItem("prescriptionId");
+    function gaugeClass(risk) {
+        if (risk === "High")     return "";
+        if (risk === "Moderate") return "moderate";
+        return "low";
+    }
 
-                if (!prescriptionId) {
-                    alert("No prescription found");
-                    return;
-                }
+    function renderAnalysis(rx) {
+        const analysis      = rx.analysis || {};
+        const interactions  = analysis.interactions || [];
+        const overallRisk   = analysis.overallRisk || "Unknown";
 
-                $scope.loading = true;
-
-                fetch("http://localhost:5000/go/patient/analysis/" + prescriptionId, {
-                    method: "GET",
-                    credentials: "include"
-                })
-                .then(res => res.json())
-                .then(data => {
-                    console.log("RISK DATA:", data);
-
-                    const interactions = data.analysis?.interactions || [];
-
-                    // Compute overall risk score
-                    const maxRisk = Math.max(...interactions.map(i => i.analysis?.risk_score || 0), 0);
-
-                    $scope.analytics = {
-                        score: Math.round(maxRisk * 100),
-                        severity: data.analysis?.overallRisk || "Low",
-                        category: maxRisk > 0.7 ? "Severe Interaction" :
-                                maxRisk > 0.4 ? "Moderate Interaction" : "Low Risk",
-                        reliability: 95 + Math.random() * 5   // optional (fake but ok)
-                    };
-
-                    // Extract alternatives from ML
-                    let allAlternatives = [];
-
-                    interactions.forEach(i => {
-                        const alts = i.analysis?.alternatives || [];
-
-                        alts.forEach(a => {
-                            allAlternatives.push({
-                                original: i.drug1,
-                                suggested: a.replace("Replace " + i.drug1 + " with ", ""),
-                                reason: "AI recommended safer alternative",
-                                selected: false
-                            });
-                        });
-                    });
-
-                    // fallback if none
-                    if (allAlternatives.length === 0) {
-                        allAlternatives.push({
-                            original: "No change needed",
-                            suggested: "Continue current medication",
-                            reason: "Low interaction risk",
-                            selected: true
-                        });
-                    }
-
-                    $scope.alternatives = allAlternatives;
-                    $scope.alternatives[0].selected = true;
-
-                    $scope.loading = false;
-
-                    setTimeout(renderChart, 100);
-                    $scope.$apply();
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("Failed to fetch risk data");
-                    $scope.loading = false;
-                    $scope.$apply();
-                });
-            };
-
-            $scope.nextStep = function() {
-                let currentIndex = $scope.tabs.indexOf($scope.currentTab);
-                if (currentIndex < $scope.tabs.length - 1) {
-                    $scope.currentTab = $scope.tabs[currentIndex + 1];
-                    if ($scope.currentTab === 'risk') $timeout(renderChart, 100);
-                }
-            };
-
-            $scope.prevStep = function() {
-                let currentIndex = $scope.tabs.indexOf($scope.currentTab);
-                if (currentIndex > 0) {
-                    $scope.currentTab = $scope.tabs[currentIndex - 1];
-                    if ($scope.currentTab === 'risk') $timeout(renderChart, 100);
-                }
-            };
-
-            $scope.navToDashboard = function() {
-                if(confirm("Exit analysis? Unsaved report data will be cleared.")) {
-                    window.location.href = 'patient.html';
-                }
-            };
-
-            $scope.selectDrug = function(index) {
-                $scope.alternatives.forEach(a => a.selected = false);
-                $scope.alternatives[index].selected = true;
-            };
-
-            $scope.getSelected = function() {
-                return $scope.alternatives.find(a => a.selected) || $scope.alternatives[0];
-            };
-
-            function renderChart() {
-                const canvas = document.getElementById('riskTrendChart');
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Pre-Dose', 'Absorption', 'Peak', 'Clearance'],
-                        datasets: [{
-                            label: 'Bio-Interaction Risk',
-                            data: [15, 45, $scope.analytics.score, 60],
-                            borderColor: '#6366f1',
-                            borderWidth: 3,
-                            pointBackgroundColor: '#fff',
-                            pointRadius: 5,
-                            tension: 0.4,
-                            fill: true,
-                            backgroundColor: 'rgba(99, 102, 241, 0.15)'
-                        }]
-                    },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: false } },
-                        scales: { 
-                            y: { display: false, min: 0, max: 100 }, 
-                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } } 
-                        }
-                    }
-                });
-            }
-
-            $scope.downloadReport = function() {
-                const prescriptionId = sessionStorage.getItem("prescriptionId");
-
-                if (!prescriptionId) {
-                    alert("No prescription found");
-                    return;
-                }
-
-                const url = "http://localhost:5000/go/patient/report/" + prescriptionId;
-
-                // Trigger file download
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "Medivise_Report.pdf";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            };
-            $scope.emailReport = function() { alert("Report dispatched to your healthcare provider's secure portal."); };
-
-            // Initial Load
-            $scope.fetchBackendData();
+        // Top risk score (highest across all pairs)
+        let topScore = 0;
+        interactions.forEach(i => {
+            if (i.analysis?.risk_score > topScore) topScore = i.analysis.risk_score;
         });
+        const riskPct = Math.round(topScore * 100);
+
+        // Interaction boxes
+        const intHtml = interactions.map(i => {
+            const sev   = (i.analysis?.severity || "low").toLowerCase();
+            const cls   = sev === "high" ? "" : sev === "moderate" ? "moderate" : "low";
+            const score = i.analysis?.risk_score != null ? (i.analysis.risk_score * 100).toFixed(0) + "%" : "—";
+
+            const factors = (i.analysis?.factors || []).slice(0, 3).map(f => {
+                const barW = Math.min(120, Math.abs(f[1]) * 60);
+                return `<div class="factor-row">
+                    <span style="color:#94a3b8;">${f[0]}</span>
+                    <div class="factor-bar" style="width:${barW}px;background:${severityColor(sev)};"></div>
+                </div>`;
+            }).join('');
+
+            const foods = (i.analysis?.food_warnings || []).map(f => `<span class="food-tag">${f}</span>`).join('') || '—';
+            const alts  = (i.analysis?.alternatives  || []).map(a => `<span class="alt-tag">${a}</span>`).join('') || '—';
+
+            return `
+                <div class="interaction-box ${cls}">
+                    <strong style="color:${severityColor(sev)};font-size:1rem;">
+                        ${sev.charAt(0).toUpperCase() + sev.slice(1)} Interaction Detected
+                    </strong>
+                    <p style="margin:8px 0 0;line-height:1.6;">
+                        <strong>${i.drug1}</strong>
+                        <span style="margin:0 6px;opacity:0.4;">+</span>
+                        <strong>${i.drug2}</strong>
+                        — Risk Score: <strong>${score}</strong>
+                    </p>
+                    ${factors ? `<div style="margin-top:12px;">${factors}</div>` : ""}
+                    <div style="margin-top:12px;">
+                        <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+                            Foods to avoid
+                        </div>
+                        ${foods}
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+                            Suggested alternatives
+                        </div>
+                        ${alts}
+                    </div>
+                </div>`;
+        }).join('') || '<p style="opacity:0.5;">No ML interaction data available. Run analysis from the Verify page.</p>';
+
+        // Alert label
+        const alertLabel = overallRisk === "High" ? "● HIGH ALERT"
+            : overallRisk === "Moderate" ? "● MODERATE RISK"
+            : "● LOW RISK";
+        const alertColor = severityColor(overallRisk);
+        $('#alert-label').text(alertLabel).css("color", alertColor);
+
+        $('#risk-content').html(`
+            <section>
+                <h3 style="margin-top:0;color:var(--accent);">4. Drug Interaction Analysis</h3>
+                <p style="opacity:0.7;font-size:0.9rem;">
+                    AI has analyzed ${interactions.length} drug pair(s) from this prescription.
+                </p>
+                ${intHtml}
+            </section>
+
+            <hr style="opacity:0.1;margin:40px 0;">
+
+            <section>
+                <h3 style="color:var(--accent);">5. Risk Score & Patient Safety</h3>
+                <div class="risk-container">
+                    <div class="risk-gauge ${gaugeClass(overallRisk)}">
+                        <span style="font-size:2.5rem;font-weight:900;">${riskPct}</span>
+                        <small style="font-weight:700;letter-spacing:1px;color:${alertColor};">
+                            ${overallRisk.toUpperCase()}
+                        </small>
+                    </div>
+                    <div style="max-width:400px;">
+                        <h4 style="margin:0 0 10px;">Safety Evaluation</h4>
+                        <p style="font-size:0.9rem;opacity:0.8;line-height:1.5;">
+                            Overall risk level is <strong style="color:${alertColor}">${overallRisk}</strong>
+                            based on ML analysis of all drug combinations.
+                            ${overallRisk === "High"
+                                ? "Proceed with extreme caution. Clinical override justification required."
+                                : "Review interactions below before final approval."}
+                        </p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
+                            <span style="background:rgba(245,158,11,0.2);color:var(--warning);padding:5px 12px;border-radius:4px;font-size:0.7rem;font-weight:800;">
+                                RENAL IMPACT
+                            </span>
+                            <span style="background:rgba(239,68,68,0.2);color:var(--danger);padding:5px 12px;border-radius:4px;font-size:0.7rem;font-weight:800;">
+                                TOXICITY RISK
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="workflow-nav">
+                <a href="pharmacist_verify.html?id=${rxId}" class="btn-nav btn-prev">← Back to Step 3</a>
+                <div style="text-align:right;">
+                    <small style="display:block;opacity:0.5;margin-bottom:10px;">
+                        I confirm I have reviewed these risks
+                    </small>
+                    <a href="pharmacist_approve.html?id=${rxId}" class="btn-nav btn-next">
+                        Proceed to Final Approval →
+                    </a>
+                </div>
+            </div>`);
+    }
+
+    $(document).ready(function () {
+        if (!rxId) {
+            $('#risk-content').html('<div class="loading" style="color:#ef4444;">No prescription ID provided. <a href="pharmacist_verify.html" style="color:var(--accent);">Go to queue →</a></div>');
+            return;
+        }
+
+        $.get(API + "/prescription/" + rxId)
+            .done(function (rx) {
+                if (!rx.analysis) {
+                    // Auto-trigger ML analysis if not done yet
+                    $.ajax({
+                        url: API + "/analyze/" + rxId,
+                        method: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ age: 40, condition: "general", dosage1: 500, dosage2: 200 }),
+                        success: function (result) {
+                            rx.analysis = { interactions: result.interactions, overallRisk: result.overallRisk };
+                            renderAnalysis(rx);
+                        },
+                        error: function () {
+                            rx.analysis = { interactions: [], overallRisk: "Unknown" };
+                            renderAnalysis(rx);
+                        }
+                    });
+                } else {
+                    renderAnalysis(rx);
+                }
+            })
+            .fail(() => {
+                $('#risk-content').html('<div class="loading" style="color:#ef4444;">Could not load prescription data.</div>');
+            });
+    });
     </script>
 </body>
 </html>

@@ -29,21 +29,23 @@ app.use(session({
   }
 }));
 
-
+//TEMPORARY
 app.use((req, res, next) => {
   if (!req.session.userId) {
     req.session.userId = new mongoose.Types.ObjectId(); 
-    req.session.role = "patient";
+    req.session.role = "pharmacist";
   }
   next();
 });
 
-
 const path = require("path");
+
 app.use(express.static(path.join(__dirname, "../frontend")));
 app.get("/check-path", (req, res) => {
   res.send(path.join(__dirname, "../frontend"));
 });
+/* -------- STATIC -------- */
+app.use("/uploads", express.static("uploads"));
 
 /* -------- MULTER -------- */
 const storage = multer.diskStorage({
@@ -64,49 +66,39 @@ mongoose.connect("mongodb://127.0.0.1:27017/test")
 /* -------- MODELS -------- */
 
 // Add more realistic user fields
-const User = mongoose.model("User", {
-  email: String,
-  password: String,
-  role: String,
-  age: Number,
+const User = mongoose.model("User", new mongoose.Schema({
+  email:     String,
+  password:  String,
+  role:      String,
+  age:       Number,
   condition: String
-});
+}));
 
 // UPDATED Prescription model
-const Prescription = mongoose.model("Prescription", {
-  userId: mongoose.Schema.Types.ObjectId,
-  image: String,
-  drugs: [String],
+const Prescription = mongoose.model("Prescription", new mongoose.Schema({
+  userId:    mongoose.Schema.Types.ObjectId,
+  image:     String,
+  drugs:     [String],
+  status:    String,
+  note:      String,
+  decidedAt: Date,
+  decidedBy: mongoose.Schema.Types.ObjectId,
   createdAt: { type: Date, default: Date.now },
-  status: String,
-  note: String,
   analysis: {
     interactions: Array,
-    overallRisk: String,
-    createdAt: { type: Date, default: Date.now }
-  }
-});
-
-// (Optional future use)
-const Drug = mongoose.model("Drug", {
-  name: String,
-  class: String,
-  interactions: [String]
-});
-
-/* -------- SESSION -------- */
-app.use(session({
-  secret: "super_secret_key",
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: "mongodb://127.0.0.1:27017/test"
-  }),
-  cookie: {
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60
+    overallRisk:  String,
+    createdAt:    Date
   }
 }));
+
+// (Optional future use)
+const Drug = mongoose.model("Drug", new mongoose.Schema({
+  name:         String,
+  class:        String,
+  interactions: [String]
+}));
+
+
 
 /* -------- INTERACTIONS (fallback only) -------- */
 // const interactions = [
@@ -120,15 +112,18 @@ app.use(session({
 const goRoutes = require("./go.js")(User, Prescription, upload);
 app.use("/go", goRoutes);
 const doctorRoutes = require("./doctorRoutes.js")(Prescription);
-app.use("/doctor", doctorRoutes);
+const pharmacistRoutes  = require("./pharmacistRoutes.js")(Prescription);
+
+app.use("/go",          goRoutes);
+app.use("/doctor",      doctorRoutes);
+app.use("/pharmacist",  pharmacistRoutes); 
 
 /* -------- TEST -------- */
 app.get("/", (req, res) => {
   res.send("Server running");
 });
 
-/* -------- STATIC -------- */
-app.use("/uploads", express.static("uploads"));
+
 
 /* -------- SERVER -------- */
 app.listen(5000, () => {
