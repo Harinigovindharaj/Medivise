@@ -22,7 +22,7 @@
             margin: 0; 
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), 
-                        url('E:/medivise/assets/img/doctor-bg.png') no-repeat center center fixed;
+                        url('../assets/doctor-bg.png') no-repeat center center fixed;
             background-size: cover;
             color: white; display: flex; height: 100vh; overflow: hidden;
         }
@@ -98,6 +98,9 @@
         <div class="card" style="padding: 15px; font-size: 0.85rem; background: rgba(255,255,255,0.05);">
             <small style="opacity: 0.5;">Logged in as:</small><br>
             <strong>Dr. Alexander Pierce</strong>
+        </div>
+        <div class="card" style="padding: 15px; font-size: 0.85rem; background: rgba(255,255,255,0.05);" ng-click="logout()">
+            <small style="opacity: 0.5;">Logout</small><br>
         </div>
     </nav>
 
@@ -204,6 +207,14 @@
                         $scope.patients = [];
                     });
             };
+            $scope.logout = function () {
+                fetch("/go/logout", { credentials: "include" })
+                    .then(() => {
+                        console.log("Logged out successfully");
+                        window.location.href = "/index.html";
+                        console.log("Redirected to index.html");
+                    });
+            }
 
             // 2. START PRESCRIPTION: Bridge to the next page
             $scope.startPrescription = function(patient) {

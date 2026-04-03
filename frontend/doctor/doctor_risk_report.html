@@ -33,6 +33,12 @@
         .bg-danger  { background: rgba(239, 68, 68, 0.2); color: var(--danger);  border: 1px solid var(--danger); }
         .bg-success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
         .bg-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .applied {
+        border-left: 4px solid var(--success);
+        }
+        .warning {
+        border-left: 4px solid var(--warning);
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
     </style>
 </head>
@@ -95,9 +101,10 @@
         <div class="glass-card" ng-show="step == 6">
             <h3>Clinical Optimization</h3>
             <p style="opacity: 0.6;">Suggested adjustments to improve safety.</p>
-            
-            <div class="item-row" ng-repeat="rec in recommendations"
-                 ng-style="border-left: 4px solid + {{rec.applied ? 'var(--success)' : 'var(--warning)'}};">
+                        
+            <div class="item-row"
+                ng-repeat="rec in recommendations"
+                ng-class="{'applied': rec.applied, 'warning': !rec.applied}">
                 <div>
                     <div style="font-weight: 600;">{{rec.title}}</div>
                     <small style="opacity: 0.5;">{{rec.desc}}</small>
