@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>MediVise | System Audit</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --border: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
+        .nav-back { padding: 12px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; }
+        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+        .terminal { background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 20px; font-family: 'Courier New', monospace; height: 600px; overflow-y: auto; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .log-line { margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; animation: fadeIn 0.4s ease; }
+        .tag-info { color: #10b981; }
+        .tag-warn { color: #fbbf24; }
+        .tag-crit { color: #ef4444; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .filter-btn { background: none; border: 1px solid var(--border); color: #94a3b8; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .filter-btn.active, .filter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.08); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2 style="color: var(--accent);">MediVise</h2>
+        <a href="admin.html" class="nav-back">← Dashboard</a>
+    </aside>
+
+    <main class="main-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h1>Prescription Audit Log</h1>
+            <span id="status" style="color:#10b981;">● LIVE</span>
+        </div>
+
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="analysis">Has Analysis</button>
+            <button class="filter-btn" data-filter="pending">Pending</button>
+        </div>
+
+        <div class="terminal" id="logBox">
+            <div class="log-line"><span style="color:var(--accent)">[--:--:--]</span> <span class="tag-info">[INFO]</span> Loading prescriptions from database...</div>
+        </div>
+    </main>
+
+    <script>
+        const BASE = "http://localhost:5000/go";
+        let allLogs = [];
+
+        function formatTime(dateStr) {
+            if (!dateStr) return "--:--:--";
+            return new Date(dateStr).toLocaleTimeString();
+        }
+
+        function classifyLog(p) {
+            const overallRisk = p.analysis?.overallRisk;
+            if (overallRisk === "High") return { type: "CRIT", cls: "tag-crit" };
+            if (p.status === "Pending" || !p.status) return { type: "WARN", cls: "tag-warn" };
+            return { type: "INFO", cls: "tag-info" };
+        }
+
+        function renderLog(p) {
+            const { type, cls } = classifyLog(p);
+            const drugs = (p.drugs || []).join(", ") || "No drugs";
+            const risk  = p.analysis?.overallRisk || "Not analyzed";
+            const status = p.status || "Pending";
+            const time = formatTime(p.createdAt);
+
+            return `<div class="log-line" data-status="${status.toLowerCase()}" data-analyzed="${p.analysis ? 'yes' : 'no'}">
+                <span style="color:var(--accent)">[${time}]</span>
+                <span class="${cls}">[${type}]</span>
+                Prescription <strong>${p._id}</strong> — Drugs: <em>${drugs}</em> — Risk: ${risk} — Status: ${status}
+            </div>`;
+        }
+
+        function applyFilter(filter) {
+            const lines = $("#logBox .log-line[data-status]");
+            lines.each(function() {
+                const $el = $(this);
+                if (filter === "all") { $el.show(); return; }
+                if (filter === "analysis" && $el.data("analyzed") === "yes") { $el.show(); return; }
+                if (filter === "pending" && $el.data("status") === "pending") { $el.show(); return; }
+                $el.hide();
+            });
+        }
+
+        // Filter buttons
+        $(".filter-btn").click(function() {
+            $(".filter-btn").removeClass("active");
+            $(this).addClass("active");
+            applyFilter($(this).data("filter"));
+        });
+
+        // Load logs from backend
+        $.ajax({
+            url: BASE + "/admin/logs",
+            method: "GET",
+            xhrFields: { withCredentials: true },
+            success: function(prescriptions) {
+                const logBox = $("#logBox");
+                logBox.empty();
+
+                if (!prescriptions.length) {
+                    logBox.append('<div class="log-line"><span class="tag-warn">[WARN]</span> No prescriptions found in database.</div>');
+                    return;
+                }
+
+                // Newest first
+                const sorted = prescriptions.slice().sort((a, b) =>
+                    new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+                );
+
+                sorted.forEach(p => logBox.append(renderLog(p)));
+                $("#status").text("● " + prescriptions.length + " RECORDS");
+            },
+            error: function() {
+                $("#logBox").html('<div class="log-line"><span class="tag-crit">[ERROR]</span> Failed to load audit log. Check admin session.</div>');
+                $("#status").css("color", "#ef4444").text("● ERROR");
+            }
+        });
+    </script>
+</body>
+</html>

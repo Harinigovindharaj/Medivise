@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html ng-app="MediViseApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediVise | Secure Login</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<script>
+    const app = angular.module('MediViseApp', []);
+
+    app.controller('LoginCtrl', function($scope, $http) {
+
+        // INITIAL STATE (fixes undefined errors)
+        $scope.user = {};
+        $scope.ui = {
+            roleSelected: false,
+            isRegistering: false,
+            otpSent: false
+        };
+
+        // ROLE SELECT
+        $scope.selectRole = function(role) {
+            $scope.user.role = role.toLowerCase(); // match backend
+            $scope.ui.roleSelected = true;
+        };
+
+        // RESET
+        $scope.resetView = function() {
+            $scope.ui.roleSelected = false;
+            $scope.ui.isRegistering = false;
+            $scope.ui.otpSent = false;
+            $scope.user = {};
+        };
+
+        // FAKE OTP (UI only)
+        $scope.handleSendOTP = function() {
+            if (!$scope.user.email) {
+                alert("Enter email first");
+                return;
+            }
+            $scope.ui.otpSent = true;
+            alert("OTP sent (mock)");
+        };
+
+        // LOGIN (REAL BACKEND)
+        $scope.handleLogin = function() {
+
+            $http.post("http://localhost:5000/go/login", {
+                email: $scope.user.email,
+                password: $scope.user.password
+            }, { withCredentials: true })
+
+            .then(res => {
+                alert("Login success");
+
+                // REDIRECT BASED ON ROLE
+                const role = res.data.role;
+
+                window.location.href = res.data.redirect;
+
+            })
+
+            .catch(() => {
+                alert("Login failed");
+            });
+        };
+    });
+
+
+    // REGISTER CONTROLLER (INSIDE SAME FILE)
+    app.controller('RegisterCtrl', function($scope, $http) {
+
+        $scope.userSignup = {};
+
+        $scope.handleSignup = function() {
+
+            if ($scope.userSignup.password !== $scope.userSignup.confirmPassword) {
+                alert("Passwords do not match");
+                return;
+            }
+
+            $http.post("http://localhost:5000/go/signup", {
+                email: $scope.userSignup.email,
+                password: $scope.userSignup.password,
+                role: $scope.$parent.user.role
+            })
+
+            .then(() => {
+                alert("Registered successfully");
+                $scope.$parent.ui.isRegistering = false;
+            })
+
+            .catch(() => {
+                alert("Signup failed");
+            });
+        };
+    });
+</script>
+<body class="med-bg" 
+      ng-controller="LoginCtrl as vm"
+      ng-init="user = user || {}; ui = ui || {}"
+      ng-class="{
+        'bg-patient': user.role && user.role.toLowerCase() === 'patient',
+        'bg-doctor': user.role && user.role.toLowerCase() === 'doctor',
+        'bg-pharmacist': user.role && user.role.toLowerCase() === 'pharmacist',
+        'bg-researcher': user.role && user.role.toLowerCase() === 'researcher',
+        'bg-admin': user.role && user.role.toLowerCase() === 'admin'
+      }">
+
+    <div class="overlay">
+        <h1 class="logo">
+            <span style="color: #4facfe;">✚</span> MediVise
+        </h1>
+        
+        <div class="grid-wrapper" ng-hide="ui.roleSelected">
+            <h3 class="instruction-text">Identify Your Role to Access Portal</h3>
+            <div class="role-grid">
+                <div class="role-card glass" ng-click="selectRole('patient')">
+                    <span>Patient</span>
+                </div>
+                <div class="role-card glass" ng-click="selectRole('doctor')">
+                    <span>Doctor</span>
+                </div>
+                <div class="role-card glass" ng-click="selectRole('pharmacist')">
+                    <div class="icon"></div>
+                    <span>Pharmacist</span>
+                </div>
+                <div class="role-card glass" ng-click="selectRole('admin')">
+                    <div class="icon"></div>
+                    <span>Admin</span>
+                </div>
+                <div class="role-card glass" ng-click="selectRole('researcher')">
+                    <div class="icon"></div>
+                    <span>Researcher</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-panel glass" ng-show="ui.roleSelected">
+            <button class="back-btn" ng-click="resetView()">← Change Role</button>
+            
+            <h2 class="form-title">
+                {{ui.isRegistering ? (user.role | uppercase) + ' Registration' : (user.role | uppercase) + ' Authentication'}}
+            </h2>
+
+            <div ng-if="!ui.isRegistering">
+                <form name="loginForm" novalidate>
+                    <div class="input-box">
+                        <input type="email" name="uEmail" placeholder="Email Address" ng-model="user.email" required>
+                    </div>
+                    <div class="input-box">
+                        <input type="password" name="uPwd" placeholder="Password" ng-model="user.password" ng-minlength="8" required>
+                    </div>
+                    <div class="otp-container" ng-show="ui.otpSent">
+                        <input type="text" name="uOtp" placeholder="6-Digit OTP" ng-model="user.otp" ng-pattern="/^\d{6}$/">
+                    </div>
+
+                    <div class="action-area">
+                        <button type="button" class="btn-main" ng-hide="ui.otpSent" ng-click="handleSendOTP()">Send OTP</button>
+                        <button type="button" class="btn-main success" ng-show="ui.otpSent" ng-click="handleLogin()">Verify & Login</button>
+                    </div>
+                </form>
+                <p class="toggle-text" style="margin-top:15px; color:white; font-size:0.9rem; cursor:pointer;">
+                    New User? <span ng-click="ui.isRegistering = true" style="color:#4facfe; text-decoration:underline;">Create Account</span>
+                </p>
+            </div>
+
+            <div ng-if="ui.isRegistering" ng-controller="RegisterCtrl">
+                <form name="regForm" novalidate>
+                    <div class="input-box">
+                        <input type="text" placeholder="Full Name" ng-model="userSignup.fullName" required style="margin-bottom:10px; width:100%; padding:10px; border-radius:8px; border:none;">
+                    </div>
+                    <div class="input-box">
+                        <input type="email" placeholder="Email Address" ng-model="userSignup.email" required style="margin-bottom:10px; width:100%; padding:10px; border-radius:8px; border:none;">
+                    </div>
+                    <div class="input-box">
+                        <input type="password" placeholder="Create Password (Min 8)" ng-model="userSignup.password" ng-minlength="8" required style="margin-bottom:10px; width:100%; padding:10px; border-radius:8px; border:none;">
+                    </div>
+                    <div class="input-box">
+                        <input type="password" placeholder="Confirm Password" ng-model="userSignup.confirmPassword" required style="margin-bottom:15px; width:100%; padding:10px; border-radius:8px; border:none;">
+                    </div>
+
+                    <button type="button" class="btn-main success" ng-click="handleSignup()">
+                        Register as {{$parent.user.role}}
+                    </button>
+                    
+                    <p class="toggle-text" style="margin-top:15px; color:white; font-size:0.9rem;">
+                        Already have an account? 
+                        <span ng-click="$parent.ui.isRegistering = false" style="color:#4facfe; cursor:pointer; text-decoration:underline;">
+                            Login
+                        </span>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

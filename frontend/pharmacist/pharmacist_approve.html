@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Clinical Review & Safety</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #0f172a; --main-bg: #020617; --accent: #38bdf8;
+            --card-bg: rgba(30, 41, 59, 0.7); --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --danger: #ef4444; --success: #10b981;
+        }
+
+        body {
+            margin: 0; font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(rgba(2,6,23,0.9), rgba(2,6,23,0.9)),
+                        url('../assets/pharmacist-bg.png') no-repeat center center fixed;
+            background-size: cover; color: var(--text-main); min-height: 100vh;
+        }
+
+        .top-nav {
+            background: var(--sidebar-bg); border-bottom: 1px solid var(--border);
+            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .review-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
+
+        .card {
+            background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border);
+            backdrop-filter: blur(12px); overflow: hidden; margin-bottom: 20px;
+        }
+        .card-header {
+            padding: 15px 20px; background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border); font-weight: 700; display: flex;
+            align-items: center; gap: 10px;
+        }
+
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .data-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+        .data-value { font-size: 15px; color: var(--text-main); margin-top: 4px; }
+
+        textarea {
+            width: 100%; background: rgba(15,23,42,0.5); border: 1px solid var(--border);
+            border-radius: 8px; color: white; padding: 15px; box-sizing: border-box;
+            font-family: inherit; resize: vertical; margin-top: 10px;
+        }
+        textarea:focus { outline: none; border-color: var(--accent); }
+
+        .btn-stack { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .btn {
+            padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;
+            border: none; transition: 0.3s; text-align: center; font-size: 14px;
+            font-family: inherit;
+        }
+        .btn-approve { background: var(--success); color: white; }
+        .btn-approve:hover { background: #059669; transform: translateY(-2px); }
+        .btn-approve:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-flag { background: var(--danger); color: white; }
+        .btn-flag:hover { background: #dc2626; transform: translateY(-2px); }
+        .btn-flag:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); color: white; }
+
+        .back-link { text-decoration: none; color: var(--text-muted); font-size: 12px; }
+        .back-link:hover { color: white; }
+
+        .shimmer { color: var(--accent); opacity: 0.5; animation: blink 1s ease infinite; }
+        @keyframes blink { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+        .interaction-item {
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+            font-size: 13px; color: var(--text-muted);
+        }
+        .interaction-item:last-child { border-bottom: none; }
+
+        .risk-badge {
+            padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase;
+        }
+        .risk-high     { background: rgba(239,68,68,0.2);  color: #f87171; }
+        .risk-moderate { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .risk-low      { background: rgba(16,185,129,0.2); color: #34d399; }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div style="font-weight:bold;font-size:20px;color:var(--accent);">
+            MediVise <span style="color:white;font-weight:400;">| Safety Center</span>
+        </div>
+        <a href="pharmacist.html" class="btn btn-outline back-link" style="font-size:12px;padding:8px 16px;">
+            BACK TO DASHBOARD
+        </a>
+    </header>
+
+    <div class="container">
+        <div class="review-grid">
+
+            <!-- LEFT COLUMN -->
+            <div>
+                <div class="card">
+                    <div class="card-header">Patient Clinical Profile</div>
+                    <div class="data-grid">
+                        <div>
+                            <div class="data-label">Drugs Prescribed</div>
+                            <div id="p-drugs" class="data-value shimmer">Fetching...</div>
+                        </div>
+                        <div>
+                            <div class="data-label">Prescription ID</div>
+                            <div id="p-id" class="data-value">—</div>
+                        </div>
+                        <div>
+                            <div class="data-label">Submitted At</div>
+                            <div id="p-date" class="data-value">—</div>
+                        </div>
+                        <div>
+                            <div class="data-label">Overall ML Risk</div>
+                            <div id="p-risk" class="data-value">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Clinical Findings & Conflict Analysis</div>
+                    <div style="padding:20px;line-height:1.6;color:var(--text-muted);">
+                        <div id="p-interactions">Fetching interaction data...</div>
+                        <hr style="border:0;border-top:1px solid var(--border);margin:20px 0;">
+                        <div class="data-label">Pharmacist Clinical Notes</div>
+                        <textarea id="pharmacist-notes" rows="5"
+                            placeholder="Add clinical remarks or justification for approval/rejection...">
+                        </textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div>
+                <div class="card">
+                    <div class="card-header">Decision Panel</div>
+                    <div class="btn-stack">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:5px;text-align:center;">
+                            Final Authorization Required
+                        </div>
+
+                        <button id="btn-approve" class="btn btn-approve">APPROVE PRESCRIPTION</button>
+                        <button id="btn-flag"    class="btn btn-flag">FLAG AS UNSAFE</button>
+
+                        <hr style="border:0;border-top:1px solid var(--border);margin:10px 0;">
+
+                        <button id="btn-discard" class="btn btn-outline">DISCARD ALERT</button>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:20px;font-size:12px;color:var(--text-muted);">
+                    <strong>Audit Trail:</strong><br>
+                    <span id="timestamp">—</span><br>
+                    System: Interaction Check Verified
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    const API = "http://localhost:5000/pharmacist";
+    const params = new URLSearchParams(window.location.search);
+    const rxId   = params.get("id");
+
+    function riskClass(risk) {
+        if (!risk) return "risk-low";
+        const r = risk.toLowerCase();
+        if (r === "high")     return "risk-high";
+        if (r === "moderate") return "risk-moderate";
+        return "risk-low";
+    }
+
+    function getNotes() {
+        const val = $('#pharmacist-notes').val().trim();
+        if (!val) {
+            alert("Please add pharmacist notes/remarks before finalizing the decision.");
+            return null;
+        }
+        return val;
+    }
+
+    function disableButtons() {
+        $('#btn-approve, #btn-flag, #btn-discard').prop('disabled', true);
+    }
+
+    /* ── Submit Decision to Backend ── */
+    function submitDecision(action) {
+        const note = getNotes();
+        if (!note) return;
+
+        const label = { approve: "APPROVE", flag: "FLAG AS UNSAFE", discard: "DISCARD" }[action];
+        if (!confirm(`Confirm: ${label} this prescription?\n\nThis action will be recorded in the audit trail.`)) return;
+
+        disableButtons();
+        $(`#btn-${action}`).text("Processing...");
+
+        $.ajax({
+            url: API + "/decision/" + rxId,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ action, note }),
+            success: function (res) {
+                alert(res.message || "Decision saved successfully.");
+                window.location.href = "pharmacist.html";
+            },
+            error: function (xhr) {
+                const msg = xhr.responseJSON?.error || "Server error. Please try again.";
+                alert("Error: " + msg);
+                // Re-enable buttons on failure
+                $('#btn-approve, #btn-flag, #btn-discard').prop('disabled', false);
+                $(`#btn-${action}`).text(label);
+            }
+        });
+    }
+
+    /* ── Load Prescription Data ── */
+    function loadData() {
+        if (!rxId) {
+            alert("No prescription ID provided.");
+            window.location.href = "pharmacist_verify.html";
+            return;
+        }
+
+        $.get(API + "/prescription/" + rxId)
+            .done(function (rx) {
+                // Basic info
+                $('#p-drugs').text((rx.drugs || []).join(', ')).removeClass('shimmer');
+                $('#p-id').text('#' + rx.id.slice(-6).toUpperCase());
+                $('#p-date').text(new Date(rx.createdAt).toLocaleString());
+                $('#timestamp').text("Alert Timestamp: " + new Date().toLocaleString());
+
+                // Risk
+                const risk = rx.analysis?.overallRisk || "Not Analyzed";
+                $('#p-risk').html(`<span class="risk-badge ${riskClass(risk)}">${risk}</span>`);
+
+                // Interactions
+                const interactions = rx.analysis?.interactions || [];
+                if (!interactions.length) {
+                    $('#p-interactions').html(
+                        '<p style="color:#64748b;font-size:13px;">No ML analysis data. ' +
+                        `<a href="pharmacist_risk_analysis.html?id=${rxId}" style="color:var(--accent);">Run analysis →</a></p>`
+                    );
+                } else {
+                    const html = interactions.map(i => {
+                        const sev   = i.analysis?.severity || "unknown";
+                        const score = i.analysis?.risk_score != null
+                            ? (i.analysis.risk_score * 100).toFixed(0) + "%"
+                            : "—";
+                        return `
+                            <div class="interaction-item">
+                                <span style="color:white;font-weight:600;">${i.drug1} + ${i.drug2}</span>
+                                <span class="risk-badge ${riskClass(sev)}" style="margin-left:8px;">${sev}</span>
+                                <span style="float:right;font-size:11px;">Risk: ${score}</span>
+                                ${i.analysis?.food_warnings?.length
+                                    ? `<div style="margin-top:4px;font-size:11px;">⚠ Foods: ${i.analysis.food_warnings.join(', ')}</div>`
+                                    : ""}
+                            </div>`;
+                    }).join('');
+                    $('#p-interactions').html(
+                        `<p style="margin:0 0 12px;font-size:13px;">
+                            System detected the following interactions:
+                        </p>${html}`
+                    );
+                }
+            })
+            .fail(() => {
+                $('#p-drugs').text("Could not load data").css("color", "#ef4444").removeClass("shimmer");
+            });
+    }
+
+    /* ── Button Handlers ── */
+    $(document).ready(function () {
+        loadData();
+
+        $('#btn-approve').on('click', () => submitDecision("approve"));
+        $('#btn-flag'   ).on('click', () => submitDecision("flag"));
+        $('#btn-discard').on('click', () => submitDecision("discard"));
+    });
+    </script>
+</body>
+</html>

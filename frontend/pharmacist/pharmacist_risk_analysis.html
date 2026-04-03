@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Clinical Risk Analysis</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #38bdf8; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --glass: rgba(15, 23, 42, 0.95); --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0; font-family: 'Inter', sans-serif; color: #f1f5f9;
+            background: linear-gradient(rgba(15,23,42,0.9), rgba(15,23,42,0.9)),
+                        url('../assets/pharmacist-bg.png') no-repeat center center fixed;
+            background-size: cover; min-height: 100vh;
+        }
+
+        .nav-header {
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .btn-back {
+            color: var(--accent); text-decoration: none; font-size: 0.85rem;
+            font-weight: 700; border: 1px solid var(--accent); padding: 8px 15px;
+            border-radius: 6px; transition: 0.3s;
+        }
+        .btn-back:hover { background: var(--accent); color: #0f172a; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+
+        .analysis-card {
+            background: var(--glass); border-radius: 24px; border: 1px solid var(--border);
+            padding: 40px; backdrop-filter: blur(20px);
+        }
+
+        .interaction-box {
+            background: rgba(239,68,68,0.1); border-left: 5px solid var(--danger);
+            padding: 20px; border-radius: 8px; margin-bottom: 15px;
+        }
+        .interaction-box.moderate {
+            background: rgba(245,158,11,0.1); border-left-color: var(--warning);
+        }
+        .interaction-box.low {
+            background: rgba(16,185,129,0.1); border-left-color: var(--success);
+        }
+
+        .risk-container {
+            display: flex; align-items: center; justify-content: space-around;
+            padding: 30px; background: rgba(255,255,255,0.03); border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .risk-gauge {
+            width: 150px; height: 150px; border-radius: 50%; border: 12px solid var(--danger);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            animation: pulse 2s infinite; flex-shrink: 0;
+        }
+        .risk-gauge.moderate { border-color: var(--warning); }
+        .risk-gauge.low      { border-color: var(--success); animation: none; }
+
+        @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
+
+        .factor-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 13px;
+        }
+        .factor-bar {
+            height: 4px; background: var(--danger); border-radius: 2px;
+            min-width: 4px; max-width: 120px;
+        }
+
+        .food-tag {
+            display: inline-block; background: rgba(245,158,11,0.15); color: var(--warning);
+            border: 1px solid rgba(245,158,11,0.3); padding: 4px 10px;
+            border-radius: 4px; font-size: 12px; margin: 4px;
+        }
+        .alt-tag {
+            display: inline-block; background: rgba(56,189,248,0.1); color: var(--accent);
+            border: 1px solid rgba(56,189,248,0.2); padding: 4px 10px;
+            border-radius: 4px; font-size: 12px; margin: 4px;
+        }
+
+        .workflow-nav {
+            margin-top: 40px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn-nav {
+            padding: 15px 35px; border-radius: 10px; font-weight: 700; cursor: pointer;
+            text-decoration: none; transition: 0.3s; font-family: inherit; border: none;
+        }
+        .btn-prev { background: transparent; border: 1px solid var(--border); color: white; }
+        .btn-next { background: var(--success); color: white; }
+        .btn-next:hover { background: white; color: #0f172a; transform: translateY(-2px); }
+
+        .loading { text-align: center; padding: 60px; color: var(--accent); opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+    <nav class="nav-header">
+        <a href="pharmacist.html" class="btn-back">← EXIT TO DASHBOARD</a>
+        <div style="text-align:center;">
+            <strong style="letter-spacing:2px;display:block;">CLINICAL RISK ENGINE</strong>
+            <small style="opacity:0.5;">Step 4 & 5: Safety Validation</small>
+        </div>
+        <div style="width:150px;text-align:right;">
+            <span id="alert-label" style="color:var(--danger);">● LOADING</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="analysis-card">
+            <div id="risk-content">
+                <div class="loading">Fetching clinical risk data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const API = "http://localhost:5000/pharmacist";
+    const params = new URLSearchParams(window.location.search);
+    const rxId   = params.get("id");
+
+    function severityColor(sev) {
+        if (!sev) return "var(--accent)";
+        const s = sev.toLowerCase();
+        if (s === "high")     return "var(--danger)";
+        if (s === "moderate") return "var(--warning)";
+        return "var(--success)";
+    }
+
+    function gaugeClass(risk) {
+        if (risk === "High")     return "";
+        if (risk === "Moderate") return "moderate";
+        return "low";
+    }
+
+    function renderAnalysis(rx) {
+        const analysis      = rx.analysis || {};
+        const interactions  = analysis.interactions || [];
+        const overallRisk   = analysis.overallRisk || "Unknown";
+
+        // Top risk score (highest across all pairs)
+        let topScore = 0;
+        interactions.forEach(i => {
+            if (i.analysis?.risk_score > topScore) topScore = i.analysis.risk_score;
+        });
+        const riskPct = Math.round(topScore * 100);
+
+        // Interaction boxes
+        const intHtml = interactions.map(i => {
+            const sev   = (i.analysis?.severity || "low").toLowerCase();
+            const cls   = sev === "high" ? "" : sev === "moderate" ? "moderate" : "low";
+            const score = i.analysis?.risk_score != null ? (i.analysis.risk_score * 100).toFixed(0) + "%" : "—";
+
+            const factors = (i.analysis?.factors || []).slice(0, 3).map(f => {
+                const barW = Math.min(120, Math.abs(f[1]) * 60);
+                return `<div class="factor-row">
+                    <span style="color:#94a3b8;">${f[0]}</span>
+                    <div class="factor-bar" style="width:${barW}px;background:${severityColor(sev)};"></div>
+                </div>`;
+            }).join('');
+
+            const foods = (i.analysis?.food_warnings || []).map(f => `<span class="food-tag">${f}</span>`).join('') || '—';
+            const alts  = (i.analysis?.alternatives  || []).map(a => `<span class="alt-tag">${a}</span>`).join('') || '—';
+
+            return `
+                <div class="interaction-box ${cls}">
+                    <strong style="color:${severityColor(sev)};font-size:1rem;">
+                        ${sev.charAt(0).toUpperCase() + sev.slice(1)} Interaction Detected
+                    </strong>
+                    <p style="margin:8px 0 0;line-height:1.6;">
+                        <strong>${i.drug1}</strong>
+                        <span style="margin:0 6px;opacity:0.4;">+</span>
+                        <strong>${i.drug2}</strong>
+                        — Risk Score: <strong>${score}</strong>
+                    </p>
+                    ${factors ? `<div style="margin-top:12px;">${factors}</div>` : ""}
+                    <div style="margin-top:12px;">
+                        <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+                            Foods to avoid
+                        </div>
+                        ${foods}
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+                            Suggested alternatives
+                        </div>
+                        ${alts}
+                    </div>
+                </div>`;
+        }).join('') || '<p style="opacity:0.5;">No ML interaction data available. Run analysis from the Verify page.</p>';
+
+        // Alert label
+        const alertLabel = overallRisk === "High" ? "● HIGH ALERT"
+            : overallRisk === "Moderate" ? "● MODERATE RISK"
+            : "● LOW RISK";
+        const alertColor = severityColor(overallRisk);
+        $('#alert-label').text(alertLabel).css("color", alertColor);
+
+        $('#risk-content').html(`
+            <section>
+                <h3 style="margin-top:0;color:var(--accent);">4. Drug Interaction Analysis</h3>
+                <p style="opacity:0.7;font-size:0.9rem;">
+                    AI has analyzed ${interactions.length} drug pair(s) from this prescription.
+                </p>
+                ${intHtml}
+            </section>
+
+            <hr style="opacity:0.1;margin:40px 0;">
+
+            <section>
+                <h3 style="color:var(--accent);">5. Risk Score & Patient Safety</h3>
+                <div class="risk-container">
+                    <div class="risk-gauge ${gaugeClass(overallRisk)}">
+                        <span style="font-size:2.5rem;font-weight:900;">${riskPct}</span>
+                        <small style="font-weight:700;letter-spacing:1px;color:${alertColor};">
+                            ${overallRisk.toUpperCase()}
+                        </small>
+                    </div>
+                    <div style="max-width:400px;">
+                        <h4 style="margin:0 0 10px;">Safety Evaluation</h4>
+                        <p style="font-size:0.9rem;opacity:0.8;line-height:1.5;">
+                            Overall risk level is <strong style="color:${alertColor}">${overallRisk}</strong>
+                            based on ML analysis of all drug combinations.
+                            ${overallRisk === "High"
+                                ? "Proceed with extreme caution. Clinical override justification required."
+                                : "Review interactions below before final approval."}
+                        </p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
+                            <span style="background:rgba(245,158,11,0.2);color:var(--warning);padding:5px 12px;border-radius:4px;font-size:0.7rem;font-weight:800;">
+                                RENAL IMPACT
+                            </span>
+                            <span style="background:rgba(239,68,68,0.2);color:var(--danger);padding:5px 12px;border-radius:4px;font-size:0.7rem;font-weight:800;">
+                                TOXICITY RISK
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="workflow-nav">
+                <a href="pharmacist_verify.html?id=${rxId}" class="btn-nav btn-prev">← Back to Step 3</a>
+                <div style="text-align:right;">
+                    <small style="display:block;opacity:0.5;margin-bottom:10px;">
+                        I confirm I have reviewed these risks
+                    </small>
+                    <a href="pharmacist_approve.html?id=${rxId}" class="btn-nav btn-next">
+                        Proceed to Final Approval →
+                    </a>
+                </div>
+            </div>`);
+    }
+
+    $(document).ready(function () {
+        if (!rxId) {
+            $('#risk-content').html('<div class="loading" style="color:#ef4444;">No prescription ID provided. <a href="pharmacist_verify.html" style="color:var(--accent);">Go to queue →</a></div>');
+            return;
+        }
+
+        $.get(API + "/prescription/" + rxId)
+            .done(function (rx) {
+                if (!rx.analysis) {
+                    // Auto-trigger ML analysis if not done yet
+                    $.ajax({
+                        url: API + "/analyze/" + rxId,
+                        method: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ age: 40, condition: "general", dosage1: 500, dosage2: 200 }),
+                        success: function (result) {
+                            rx.analysis = { interactions: result.interactions, overallRisk: result.overallRisk };
+                            renderAnalysis(rx);
+                        },
+                        error: function () {
+                            rx.analysis = { interactions: [], overallRisk: "Unknown" };
+                            renderAnalysis(rx);
+                        }
+                    });
+                } else {
+                    renderAnalysis(rx);
+                }
+            })
+            .fail(() => {
+                $('#risk-content').html('<div class="loading" style="color:#ef4444;">Could not load prescription data.</div>');
+            });
+    });
+    </script>
+</body>
+</html>

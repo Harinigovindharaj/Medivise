@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediVise | Critical Safety Alerts</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --danger: #ef4444; --warning: #f59e0b; --accent: #87d3f3;
+            --glass: rgba(15, 23, 42, 0.95); --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0; font-family: 'Inter', sans-serif; color: #f1f5f9;
+            background: #0f172a; min-height: 100vh;
+        }
+
+        .nav-header {
+            padding: 15px 40px; background: rgba(0,0,0,0.3);
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .container { max-width: 900px; margin: 50px auto; padding: 0 20px; }
+
+        .alert-card {
+            background: var(--glass); border-radius: 20px; border: 1px solid var(--danger);
+            padding: 30px; position: relative; overflow: hidden;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.1); margin-bottom: 20px;
+        }
+
+        .alert-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .pulse-icon {
+            width: 12px; height: 12px; background: var(--danger); border-radius: 50%;
+            box-shadow: 0 0 10px var(--danger); animation: pulse 1.5s infinite; flex-shrink: 0;
+        }
+        @keyframes pulse { 0%{opacity:1} 50%{opacity:0.3} 100%{opacity:1} }
+
+        .evidence-box {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            padding: 20px; border-radius: 12px; margin-top: 20px;
+        }
+
+        .interaction-row {
+            padding: 12px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .interaction-row:last-child { border-bottom: none; }
+
+        .btn-group { display: flex; gap: 15px; margin-top: 30px; }
+        .btn {
+            flex: 1; padding: 15px; border-radius: 8px; font-weight: 700;
+            cursor: pointer; border: none; transition: 0.3s; text-align: center; text-decoration: none;
+            font-family: inherit;
+        }
+        .btn-resolve  { background: var(--accent); color: #0f172a; }
+        .btn-resolve:hover { opacity: 0.85; }
+        .btn-dashboard { background: transparent; border: 1px solid var(--border); color: white; }
+        .btn-dashboard:hover { background: rgba(255,255,255,0.05); }
+
+        .severity-badge {
+            padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase;
+        }
+        .sev-high     { background: rgba(239,68,68,0.2);  color: #f87171; }
+        .sev-moderate { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .sev-low      { background: rgba(16,185,129,0.2); color: #34d399; }
+
+        .loading { text-align: center; padding: 60px; color: var(--accent); opacity: 0.7; }
+        .empty-state { text-align: center; padding: 60px; color: #475569; }
+    </style>
+</head>
+<body>
+
+    <nav class="nav-header">
+        <strong style="color: var(--danger);">CRITICAL SYSTEM ALERT</strong>
+        <a href="pharmacist.html" class="btn btn-dashboard" style="flex:0; padding: 8px 15px; font-size:0.8rem;">
+            BACK TO DASHBOARD
+        </a>
+    </nav>
+
+    <div class="container">
+        <div id="alerts-container">
+            <div class="loading">Fetching critical alerts...</div>
+        </div>
+    </div>
+
+    <script>
+    $(document).ready(function () {
+
+        const API = "http://localhost:5000/pharmacist";
+
+        // Read optional ?id= param (coming from dashboard "Resolve Now")
+        const params    = new URLSearchParams(window.location.search);
+        const focusedId = params.get("id");
+
+        function severityClass(sev) {
+            if (!sev) return "sev-low";
+            const s = sev.toLowerCase();
+            if (s === "high")     return "sev-high";
+            if (s === "moderate") return "sev-moderate";
+            return "sev-low";
+        }
+
+        function renderAlerts(data) {
+            const $c = $('#alerts-container');
+            $c.empty();
+
+            if (!data.length) {
+                $c.html('<div class="empty-state">✓ No active high-risk alerts at this time.</div>');
+                return;
+            }
+
+            // If focused ID was passed, bring it to top
+            if (focusedId) {
+                data.sort((a, b) => (a.id === focusedId ? -1 : b.id === focusedId ? 1 : 0));
+            }
+
+            data.forEach(rx => {
+                const interactionsHtml = (rx.interactions || []).map(i => {
+                    const sev  = i.analysis?.severity || "unknown";
+                    const score = i.analysis?.risk_score != null
+                        ? (i.analysis.risk_score * 100).toFixed(0) + "%"
+                        : "—";
+                    return `
+                        <div class="interaction-row">
+                            <div>
+                                <strong>${i.drug1}</strong>
+                                <span style="margin:0 8px;opacity:0.4;">+</span>
+                                <strong>${i.drug2}</strong>
+                                <div style="font-size:12px;color:#94a3b8;margin-top:3px;">
+                                    ${i.analysis?.factors?.[0]?.[0] || 'Interaction detected'}
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span class="severity-badge ${severityClass(sev)}">${sev}</span>
+                                <div style="font-size:11px;color:#64748b;margin-top:4px;">Risk: ${score}</div>
+                            </div>
+                        </div>`;
+                }).join('') || '<p style="opacity:0.5;">Run ML analysis to see interactions.</p>';
+
+                const drugs = rx.drugs.join(', ');
+
+                $c.append(`
+                    <div class="alert-card" id="alert-${rx.id}">
+                        <div class="alert-header">
+                            <div class="pulse-icon"></div>
+                            <h2 style="margin:0;">High-Risk Prescription Detected</h2>
+                        </div>
+
+                        <p style="opacity:0.7;">
+                            Prescription contains: <strong>${drugs}</strong>
+                        </p>
+
+                        <div class="evidence-box">
+                            <h4 style="margin-top:0;color:var(--warning);">
+                                Detected Interactions
+                            </h4>
+                            ${interactionsHtml}
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-dashboard"
+                                onclick="if(confirm('Ignore this alert?')) location.href='pharmacist.html'">
+                                IGNORE & EXIT
+                            </button>
+                            <button class="btn btn-resolve"
+                                onclick="location.href='pharmacist_verify.html?id=${rx.id}'">
+                                OPEN FOR REVIEW →
+                            </button>
+                        </div>
+                    </div>`);
+            });
+        }
+
+        /* ── Load Alerts from Backend ── */
+        $.get(API + "/alerts")
+            .done(renderAlerts)
+            .fail(() => {
+                $('#alerts-container').html(`
+                    <div class="alert-card">
+                        <div class="alert-header">
+                            <div class="pulse-icon"></div>
+                            <h2 style="margin:0;">Could not reach server</h2>
+                        </div>
+                        <p style="opacity:0.7;">
+                            The backend is not responding. Check that
+                            <code>server.js</code> is running on port 5000.
+                        </p>
+                        <div class="btn-group">
+                            <a href="pharmacist.html" class="btn btn-dashboard">BACK TO DASHBOARD</a>
+                        </div>
+                    </div>`);
+            });
+    });
+    </script>
+</body>
+</html>
