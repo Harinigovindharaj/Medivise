@@ -9,10 +9,23 @@
         .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
         .nav-back { padding: 12px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; }
         .main-content { flex: 1; margin-left: 310px; padding: 40px; }
-        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.03); border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.03); border-radius: 10px; overflow: hidden; }
         th, td { padding: 15px; border-bottom: 1px solid var(--border); text-align: left; }
-        .risk-high { color: #ef4444; font-weight: bold; }
-        .btn-add { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
+        th { color: var(--accent); font-size: 12px; text-transform: uppercase; }
+        .risk-high   { color: #ef4444; font-weight: bold; }
+        .risk-medium { color: #f59e0b; font-weight: bold; }
+        .risk-low    { color: #10b981; font-weight: bold; }
+        .btn-add { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
+        .btn-remove { color: #ef4444; background: none; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-remove:hover { background: #ef4444; color: white; }
+        .add-form { background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 25px; display: none; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .add-form label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
+        .add-form input, .add-form select { background: #0f172a; border: 1px solid var(--border); color: #f1f5f9; padding: 8px 12px; border-radius: 5px; width: 180px; }
+        .add-form .field { display: flex; flex-direction: column; }
+        .btn-submit { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; height: fit-content; }
+        .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: #000; padding: 12px 22px; border-radius: 8px; font-weight: bold; display: none; z-index: 999; }
+        .toast.error { background: #ef4444; color: #fff; }
+        .empty-row td { color: #64748b; text-align: center; padding: 40px; }
     </style>
 </head>
 <body>
@@ -22,18 +35,128 @@
     </aside>
     <main class="main-content">
         <h1>Drug Registry</h1>
-        <button class="btn-add" id="newDrug">+ Add New Compound</button>
+
+        <button class="btn-add" id="toggleForm">+ Add New Compound</button>
+
+        <div class="add-form" id="addForm">
+            <div class="field">
+                <label>Drug Name</label>
+                <input type="text" id="drugName" placeholder="e.g. Warfarin">
+            </div>
+            <div class="field">
+                <label>Drug Class</label>
+                <input type="text" id="drugClass" placeholder="e.g. Anticoagulant">
+            </div>
+            <div class="field">
+                <label>Known Interactions (comma-separated)</label>
+                <input type="text" id="drugInteractions" placeholder="e.g. Aspirin, Ibuprofen">
+            </div>
+            <button class="btn-submit" id="submitDrug">Add Drug</button>
+        </div>
+
         <table>
-            <thead><tr><th>Compound Name</th><th>Dosage</th><th>Risk level</th><th>Actions</th></tr></thead>
+            <thead>
+                <tr><th>Compound Name</th><th>Class</th><th>Interactions</th><th>Actions</th></tr>
+            </thead>
             <tbody id="drugList">
-                <tr><td>Warfarin</td><td>5mg</td><td><span class="risk-high">High</span></td><td><button>Edit</button> <button style="color:red" onclick="$(this).closest('tr').remove()">Remove</button></td></tr>
+                <tr class="empty-row"><td colspan="4">Loading drug registry...</td></tr>
             </tbody>
         </table>
     </main>
+
+    <div class="toast" id="toast"></div>
+
     <script>
-        $('#newDrug').click(function(){
-            $('#drugList').append('<tr><td>New Drug</td><td>0mg</td><td>Low</td><td><button>Edit</button> <button style="color:red">Remove</button></td></tr>');
+        const BASE = "http://localhost:5000/go";
+
+        function showToast(msg, isError = false) {
+            const t = $("#toast");
+            t.text(msg).removeClass("error").toggleClass("error", isError).fadeIn(200);
+            setTimeout(() => t.fadeOut(400), 2500);
+        }
+
+        function loadDrugs() {
+            $.ajax({
+                url: BASE + "/admin/drugs",
+                method: "GET",
+                xhrFields: { withCredentials: true },
+                success: function(drugs) {
+                    const tbody = $("#drugList");
+                    tbody.empty();
+
+                    if (!drugs.length) {
+                        tbody.append('<tr class="empty-row"><td colspan="4">No drugs in registry.</td></tr>');
+                        return;
+                    }
+
+                    drugs.forEach(function(drug) {
+                        const interactions = (drug.interactions || []).join(", ") || "—";
+                        const row = `
+                            <tr data-id="${drug._id}">
+                                <td><strong>${drug.name || "—"}</strong></td>
+                                <td>${drug.class || "—"}</td>
+                                <td style="color:#94a3b8; font-size:13px;">${interactions}</td>
+                                <td><button class="btn-remove delete-drug-btn">Remove</button></td>
+                            </tr>`;
+                        tbody.append(row);
+                    });
+                },
+                error: function() {
+                    $("#drugList").html('<tr class="empty-row"><td colspan="4" style="color:#ef4444;">Failed to load drugs. Are you logged in as admin?</td></tr>');
+                }
+            });
+        }
+
+        // Toggle add form
+        $("#toggleForm").click(function() {
+            $("#addForm").toggle("fast");
         });
+
+        // Add drug
+        $("#submitDrug").click(function() {
+            const name = $("#drugName").val().trim();
+            const cls  = $("#drugClass").val().trim();
+            const rawInteractions = $("#drugInteractions").val().trim();
+            const interactions = rawInteractions ? rawInteractions.split(",").map(s => s.trim()) : [];
+
+            if (!name) { showToast("Drug name is required.", true); return; }
+
+            $.ajax({
+                url: BASE + "/admin/drugs",
+                method: "POST",
+                contentType: "application/json",
+                xhrFields: { withCredentials: true },
+                data: JSON.stringify({ name, class: cls, interactions }),
+                success: function() {
+                    showToast("Drug added successfully!");
+                    $("#drugName, #drugClass, #drugInteractions").val("");
+                    $("#addForm").hide();
+                    loadDrugs();
+                },
+                error: function() { showToast("Failed to add drug.", true); }
+            });
+        });
+
+        // Delete drug
+        $(document).on("click", ".delete-drug-btn", function() {
+            const row = $(this).closest("tr");
+            const drugId = row.data("id");
+
+            if (!confirm("Remove this drug from the registry?")) return;
+
+            $.ajax({
+                url: BASE + "/admin/drugs/" + drugId,
+                method: "DELETE",
+                xhrFields: { withCredentials: true },
+                success: function() {
+                    row.fadeOut(300, function() { $(this).remove(); });
+                    showToast("Drug removed.");
+                },
+                error: function() { showToast("Failed to remove drug.", true); }
+            });
+        });
+
+        loadDrugs();
     </script>
 </body>
 </html>

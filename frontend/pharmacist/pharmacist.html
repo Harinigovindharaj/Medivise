@@ -98,7 +98,7 @@
         <a href="pharmacist_verify.html" class="nav-item">Verification Queue</a>
         <a href="pharmacist_alerts.html" class="nav-item">Safety Alerts</a>
         <div style="position: absolute; bottom: 30px; width: 200px; border-top: 1px solid var(--border); padding-top: 20px;">
-            <a href="login.html" class="nav-item" style="color: #ef4444;">Sign Out</a>
+            <a onclick="logout()" class="nav-item" style="color: #ef4444;">Sign Out</a>
         </div>
     </div>
 
@@ -148,9 +148,19 @@
     </div>
 
     <script>
+        function logout() {
+            fetch("/go/logout", { credentials: "include" })
+                .then(() => {
+                    window.location.href = "/index.html";
+                })
+                .catch(() => {
+                    alert("Logout failed");
+                });
+        }
     $(document).ready(function () {
 
         const API = "http://localhost:5000/pharmacist";
+
 
         /* ── Clock ── */
         function updateClock() {

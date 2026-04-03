@@ -4,13 +4,21 @@
     <meta charset="UTF-8"><title>MediVise | Reports</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --card-bg: rgba(15, 23, 42, 0.85); --border: rgba(255, 255, 255, 0.1); }
+        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --card-bg: rgba(15, 23, 42, 0.85); --border: rgba(255, 255, 255, 0.1); --text-muted: #94a3b8; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #020617; color: #f1f5f9; display: flex; }
         .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; height: 100vh; position: fixed; }
         .main-content { flex: 1; margin-left: 310px; padding: 40px; }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 35px; }
+        .summary-card { background: var(--card-bg); border: 1px solid var(--border); padding: 25px; border-radius: 12px; text-align: center; }
+        .summary-card h2 { font-size: 38px; color: var(--accent); margin: 8px 0; }
+        .summary-card p { color: var(--text-muted); font-size: 13px; margin: 0; }
+
         .report-card { background: var(--card-bg); border: 1px solid var(--border); padding: 25px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .btn-gen { background: #10b981; color: #000; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-gen:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .loading-val { color: var(--text-muted); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     </style>
 </head>
 <body>
@@ -21,7 +29,20 @@
 
     <main class="main-content">
         <h1>System Reports</h1>
-        
+
+        <!-- Live summary from /admin/reports -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <p>Total Registered Users</p>
+                <h2 id="rptUsers" class="loading-val">...</h2>
+            </div>
+            <div class="summary-card">
+                <p>Total Prescriptions Processed</p>
+                <h2 id="rptPrescriptions" class="loading-val">...</h2>
+            </div>
+        </div>
+
+        <!-- Export actions (client-side simulation — connect to real export endpoints as needed) -->
         <div class="report-card">
             <div>
                 <h3>Monthly Drug Usage Report</h3>
@@ -35,24 +56,108 @@
                 <h3>User Activity Audit</h3>
                 <p style="color:var(--text-muted)">Detailed log of administrator and doctor login sessions.</p>
             </div>
-            <button class="btn-gen" onclick="simulateReport(this)">Generate CSV</button>
+            <button class="btn-gen" onclick="exportUsersCSV(this)">Export CSV</button>
+        </div>
+
+        <div class="report-card">
+            <div>
+                <h3>Prescription Log Export</h3>
+                <p style="color:var(--text-muted)">Raw prescription data including drug lists and analysis results.</p>
+            </div>
+            <button class="btn-gen" onclick="exportLogsJSON(this)">Export JSON</button>
         </div>
     </main>
 
     <script>
+        const BASE = "http://localhost:5000/go";
+
+        // Load live report stats
+        $.ajax({
+            url: BASE + "/admin/reports",
+            method: "GET",
+            xhrFields: { withCredentials: true },
+            success: function(data) {
+                $("#rptUsers").text(data.totalUsers.toLocaleString()).removeClass("loading-val");
+                $("#rptPrescriptions").text(data.totalPrescriptions.toLocaleString()).removeClass("loading-val");
+            },
+            error: function() {
+                $("#rptUsers, #rptPrescriptions").text("—").removeClass("loading-val");
+            }
+        });
+
+        // Simulated PDF generation (replace with real endpoint if available)
         function simulateReport(btn) {
-            const originalText = btn.innerText;
+            const orig = btn.innerText;
             btn.disabled = true;
             btn.innerText = "Processing...";
-            
             setTimeout(() => {
                 btn.innerText = "Downloading...";
                 setTimeout(() => {
-                    btn.innerText = originalText;
+                    btn.innerText = orig;
                     btn.disabled = false;
-                    alert("Report generated successfully and saved to downloads.");
+                    alert("Report generated and saved to downloads.");
                 }, 1500);
             }, 2000);
+        }
+
+        // Export users as CSV (fetched from backend)
+        function exportUsersCSV(btn) {
+            const orig = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Fetching...";
+
+            $.ajax({
+                url: BASE + "/admin/users",
+                method: "GET",
+                xhrFields: { withCredentials: true },
+                success: function(users) {
+                    const rows = [["ID", "Email", "Role"]];
+                    users.forEach(u => rows.push([u._id, u.email || "", u.role || ""]));
+
+                    const csv = rows.map(r => r.join(",")).join("\n");
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = "users_audit.csv"; a.click();
+                    URL.revokeObjectURL(url);
+
+                    btn.innerText = orig;
+                    btn.disabled = false;
+                },
+                error: function() {
+                    alert("Failed to fetch users.");
+                    btn.innerText = orig;
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        // Export prescription logs as JSON
+        function exportLogsJSON(btn) {
+            const orig = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Fetching...";
+
+            $.ajax({
+                url: BASE + "/admin/logs",
+                method: "GET",
+                xhrFields: { withCredentials: true },
+                success: function(prescriptions) {
+                    const blob = new Blob([JSON.stringify(prescriptions, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = "prescription_log.json"; a.click();
+                    URL.revokeObjectURL(url);
+
+                    btn.innerText = orig;
+                    btn.disabled = false;
+                },
+                error: function() {
+                    alert("Failed to fetch prescriptions.");
+                    btn.innerText = orig;
+                    btn.disabled = false;
+                }
+            });
         }
     </script>
 </body>

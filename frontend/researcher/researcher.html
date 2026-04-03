@@ -21,7 +21,7 @@
 
         body {
             /* Set research.png as background */
-            background: linear-gradient(rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.85)),url('/frontend/assets/research-bg.png') no-repeat center center fixed;
+            background: linear-gradient(rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.85)),url('../assets/research-bg.png') no-repeat center center fixed;
             background-size: cover;
             background-color: var(--bg-dark); /* Fallback */
             color: #f1f5f9;
@@ -103,100 +103,163 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
-        // --- 📊 Reusable Chart.js Component ---
+        // --- Chart Component (UNCHANGED) ---
         const VisualChart = ({ id, type, data, options }) => {
             useEffect(() => {
+                if (!data) return;
+
                 const ctx = document.getElementById(id).getContext('2d');
                 const newChart = new Chart(ctx, {
                     type,
                     data,
                     options: { ...options, maintainAspectRatio: false }
                 });
-                return () => newChart.destroy(); // Cleanup on unmount
+
+                return () => newChart.destroy();
             }, [id, data]);
+
             return <canvas id={id}></canvas>;
         };
 
         const App = () => {
             const [activeTab, setActiveTab] = useState('Dashboard');
+            const [signedIn, setSignedIn] = useState(true);
 
-            // --- 💡 Dummy Analytics Data (API-Ready Structure) ---
-            const trendData = {
-                labels: ['Trial A', 'Trial B', 'Trial C', 'Trial D', 'Trial E'],
-                datasets: [{
-                    label: 'Anomalies Detected',
-                    data: [12, 19, 3, 5, 2],
-                    backgroundColor: 'rgba(0, 242, 254, 0.6)',
-                    borderColor: '#00f2fe',
-                    borderWidth: 2,
-                    borderRadius: 5
-                }]
+            // NEW STATE
+            const [stats, setStats] = useState({});
+            const [trendData, setTrendData] = useState(null);
+            const [riskData, setRiskData] = useState(null);
+
+            const handleSignout = () => {
+                fetch("http://localhost:5000/go/logout", {
+                    credentials: "include"
+                })
+                .then(() => {
+                    window.location.href = "/index.html";
+                })
+                .catch(err => console.error(err));
             };
 
-            const riskData = {
-                labels: ['High Risk', 'Moderate', 'Safe'],
-                datasets: [{
-                    data: [25, 35, 40],
-                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-                    borderWidth: 0
-                }]
-            };
+            // BACKEND INTEGRATION
+            useEffect(() => {
+
+                // INTERACTIONS DATA
+                fetch("http://localhost:5000/go/researcher/interactions", {
+                    credentials: "include"
+                })
+                .then(res => res.json())
+                .then(data => setStats(data))
+                .catch(err => console.error(err));
+
+                // RISK DISTRIBUTION
+                fetch("http://localhost:5000/go/researcher/risk", {
+                    credentials: "include"
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setRiskData({
+                        labels: ['High Risk', 'Moderate', 'Safe'],
+                        datasets: [{
+                            data: [data.highRisk, data.mediumRisk, data.lowRisk],
+                            backgroundColor: ['#ef4444', '#f59e0b', '#10b981']
+                        }]
+                    });
+                });
+
+                // VISUALIZATION
+                fetch("http://localhost:5000/go/researcher/visualization", {
+                    credentials: "include"
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setTrendData({
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Prescriptions',
+                            data: data.data,
+                            backgroundColor: 'rgba(0, 242, 254, 0.6)'
+                        }]
+                    });
+                });
+
+            }, []);
 
             return (
                 <div className="d-flex">
-                    {/* 🖥️ LEFT SIDEBAR (Glassmorphism) */}
+
+                    {/* SIDEBAR (UNCHANGED) */}
                     <div className="sidebar glass-panel">
                         <h4 className="fw-bold mb-5 px-3" style={{color: 'var(--primary-blue)'}}>MEDIVISE PRO</h4>
                         
-                        {['Dashboard', 'Patient Risk', 'Drug Database', 'Lab Trends', 'System Load'].map(tab => (
+                        {['Dashboard', 'Patient Risk', 'Drug Database', 'Lab Trends', 'System Load', 'Sign Out'].map(tab => (
                             <div key={tab} 
-                                 className={`nav-link-custom ${activeTab === tab ? 'active' : ''}`}
-                                 onClick={() => setActiveTab(tab)}>
+                                className={`nav-link-custom ${activeTab === tab ? 'active' : ''}`}
+                                onClick={() => {
+                                    if (tab === 'Sign Out') {
+                                        handleSignout();
+                                    } else {
+                                        setActiveTab(tab);
+                                    }
+                                }}>
                                 {tab}
                             </div>
                         ))}
                     </div>
 
-                    {/* 🚀 MAIN CONTENT AREA (Full Height & Dynamic) */}
+                    {/* MAIN CONTENT */}
                     <div className="main-content flex-grow-1">
                         
-                        {/* 1. Header Row */}
+                        {/* HEADER */}
                         <div className="d-flex justify-content-between align-items-center mb-5 p-3 glass-panel">
                             <div>
                                 <h2 className="fw-bold m-0">{activeTab} Analytics</h2>
                                 <p className="text-secondary small m-0">Live Research Intelligence Feed</p>
                             </div>
                             <div className="d-flex gap-3">
-                                <button className="btn btn-sm btn-outline-light">Export PDF</button>
-                                <button className="btn btn-sm btn-info" onClick={() => alert('Refreshing Data...')}>Sync Data</button>
+                                <button 
+                                    className="btn btn-sm btn-outline-light"
+                                    onClick={() => window.open("http://localhost:5000/go/researcher/export")}
+                                >
+                                    Export PDF
+                                </button>
+                                <button className="btn btn-sm btn-info" onClick={() => location.reload()}>
+                                    Sync Data
+                                </button>
                             </div>
                         </div>
 
-                        {/* 2. DYNAMIC CONTENT: DASHBOARD VIEW */}
+                        {/* DASHBOARD */}
                         {activeTab === 'Dashboard' && (
                             <div className="row g-4">
                                 
-                                {/* A. Summary Cards (Fills top space) */}
+                                {/* STATS */}
                                 <div className="col-md-3">
                                     <div className="glass-panel p-3 text-center analytics-card">
                                         <div className="stat-label">Total Cohorts</div>
-                                        <div className="stat-value">1,240</div>
+                                        <div className="stat-value">
+                                            {stats.totalDrugsAnalyzed || 0}
+                                        </div>
                                     </div>
                                 </div>
+
                                 <div className="col-md-3">
                                     <div className="glass-panel p-3 text-center analytics-card">
                                         <div className="stat-label">Risk Events</div>
-                                        <div className="stat-value text-danger">452</div>
+                                        <div className="stat-value text-danger">
+                                            {(riskData?.datasets?.[0]?.data?.[0] || 0)}
+                                        </div>
                                     </div>
                                 </div>
+
                                 <div className="col-md-3">
                                     <div className="glass-panel p-3 text-center analytics-card">
                                         <div className="stat-label">AI Precision</div>
                                         <div className="stat-value text-info">99.1%</div>
                                     </div>
                                 </div>
+
                                 <div className="col-md-3">
                                     <div className="glass-panel p-3 text-center analytics-card">
                                         <div className="stat-label">System Load</div>
@@ -204,25 +267,30 @@
                                     </div>
                                 </div>
 
-                                {/* B. Charts Section (Side-by-side comparison) */}
+                                {/* CHARTS */}
                                 <div className="col-lg-8">
                                     <div className="glass-panel p-4 h-100">
                                         <h6 className="mb-4">Anomaly Frequency (by Trial Group)</h6>
                                         <div className="chart-container">
-                                            <VisualChart id="barChart" type="bar" data={trendData} options={{ plugins: { legend: { display: false } } }} />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-lg-4">
-                                    <div className="glass-panel p-4 h-100">
-                                        <h6 className="mb-4">Global Patient Risk Distribution</h6>
-                                        <div className="chart-container">
-                                            <VisualChart id="pieChart" type="pie" data={riskData} options={{ plugins: { legend: { position: 'bottom', labels: {color: '#fff'} } } }} />
+                                            {trendData && (
+                                                <VisualChart id="barChart" type="bar" data={trendData} options={{ plugins: { legend: { display: false } } }} />
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* C. Detailed Data Log (Fills bottom space) */}
+                                <div className="col-lg-4">
+                                    <div className="glass-panel p-4 h-100">
+                                        <h6 className="mb-4">Global Patient Risk Distribution</h6>
+                                        <div className="chart-container">
+                                            {riskData && (
+                                                <VisualChart id="pieChart" type="pie" data={riskData} options={{ plugins: { legend: { position: 'bottom', labels: {color: '#fff'} } } }} />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* TABLE (UNCHANGED) */}
                                 <div className="col-12 mt-4">
                                     <div className="glass-panel p-4">
                                         <h6 className="mb-3">Recent High-Risk Interaction Log</h6>
@@ -239,7 +307,7 @@
                             </div>
                         )}
 
-                        {/*Placeholder for other tabs */}
+                        {/* OTHER TABS (UNCHANGED) */}
                         {activeTab !== 'Dashboard' && (
                             <div className="glass-panel p-5 text-center my-5">
                                 <h3>{activeTab.toUpperCase()} ENGINE ACTIVE</h3>
@@ -253,6 +321,7 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
     </script>
 </body>
 </html>

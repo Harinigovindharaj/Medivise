@@ -17,7 +17,6 @@
 
         body {
             margin: 0; font-family: 'Inter', sans-serif; color: #f1f5f9;
-            /* Using the requested doctor-bg */
             background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), 
                         url('../assets/doctor-bg.png') no-repeat center center fixed;
             background-size: cover; min-height: 100vh;
@@ -36,7 +35,6 @@
             position: relative; overflow: hidden;
         }
 
-        /* Scanning Animation */
         .scanner-line {
             width: 100%; height: 2px;
             background: linear-gradient(90deg, transparent, var(--accent), transparent);
@@ -70,25 +68,24 @@
         .interaction-item:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); }
 
         .severity-high { background: rgba(239, 68, 68, 0.15); color: var(--danger); padding: 5px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
-        .severity-mod { background: rgba(245, 158, 11, 0.15); color: var(--warning); padding: 5px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+        .severity-mod  { background: rgba(245, 158, 11, 0.15); color: var(--warning); padding: 5px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
 
-        .nav-footer {
-            margin-top: 30px; display: flex; justify-content: space-between; width: 100%;
-        }
+        .nav-footer { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; }
 
-        .btn {
-            padding: 14px 32px; border-radius: 10px; cursor: pointer;
-            font-weight: 600; transition: 0.3s; text-decoration: none; border: none;
-            display: inline-flex; align-items: center; gap: 10px;
-        }
+        .btn { padding: 14px 32px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.3s; text-decoration: none; border: none; display: inline-flex; align-items: center; gap: 10px; }
         .btn-back { background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border); }
         .btn-back:hover { background: rgba(255,255,255,0.1); }
         .btn-next { background: var(--accent); color: #0f172a; box-shadow: 0 10px 20px -5px rgba(56, 189, 248, 0.4); }
         .btn-next:hover { transform: translateY(-2px); }
         .btn-next:disabled { opacity: 0.4; transform: none; cursor: not-allowed; }
 
-        /* Spinner */
         .loading-text { font-weight: 300; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+
+        /* FIX: Warning banner for when localStorage is empty */
+        .warn-banner {
+            background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning);
+            border-radius: 10px; padding: 20px; text-align: center; color: var(--warning);
+        }
     </style>
 </head>
 <body ng-controller="InteractionCtrl">
@@ -98,35 +95,49 @@
             <div class="scanner-line" ng-if="loading"></div>
             
             <h1 style="margin: 0 0 10px 0; font-weight: 700;">Interaction Analysis</h1>
-            <p style="opacity: 0.6; margin-bottom: 40px;">Clinical AI is cross-referencing prescribed drugs against global pharmacology databases.</p>
-            
-            <div style="margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
-                <h4 style="margin: 0 0 15px 0; opacity: 0.4; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Prescribed Agents</h4>
-                <div class="med-pill" ng-repeat="m in medList">
-                    {{m.name}} <span style="margin-left:8px; opacity:0.5; font-size:0.8rem;">{{m.dose}}mg</span>
-                </div>
+            <p style="opacity: 0.6; margin-bottom: 40px;">
+                Clinical AI is cross-referencing prescribed drugs against pharmacology rules.
+            </p>
+
+            <!-- FIX: Show warning if no med data found in localStorage instead of
+                 silently showing an empty analysis. This can happen if the user
+                 navigates directly to this page. -->
+            <div class="warn-banner" ng-if="!loading && medList.length == 0">
+                No prescription data found. Please go back and complete the prescription step first.
             </div>
 
-            <div ng-if="loading" style="text-align: center; padding: 60px 0;">
-                <div class="loading-text">Analyzing Chemical Pathways...</div>
-            </div>
-
-            <div ng-if="!loading">
-                <div class="interaction-item" ng-repeat="item in interactions">
-                    <div style="flex: 1;">
-                        <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 5px;">{{item.pair}}</div>
-                        <div style="font-size: 0.9rem; opacity: 0.7; line-height: 1.5;">{{item.desc}}</div>
-                    </div>
-                    <div style="margin-left: 20px;">
-                        <span ng-class="item.severity === 'High' ? 'severity-high' : 'severity-mod'">
-                            {{item.severity}} Risk
-                        </span>
+            <div ng-if="medList.length > 0">
+                <div style="margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; opacity: 0.4; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Prescribed Agents</h4>
+                    <div class="med-pill" ng-repeat="m in medList">
+                        {{m.name || m}}
+                        <!-- FIX: m.dose may be undefined if the list was saved as strings.
+                             The || '' guard prevents showing 'undefinedmg'. -->
+                        <span ng-if="m.dose" style="margin-left:8px; opacity:0.5; font-size:0.8rem;">{{m.dose}}mg</span>
                     </div>
                 </div>
 
-                <div ng-if="interactions.length == 0" style="text-align: center; padding: 40px; background: rgba(16, 185, 129, 0.05); border-radius: 12px; border: 1px dashed var(--success);">
-                    <div style="color: var(--success); font-size: 1.2rem; font-weight: 600;">✓ Clinical Clearance Granted</div>
-                    <div style="opacity: 0.6; font-size: 0.9rem; margin-top: 5px;">No severe or moderate drug interactions identified.</div>
+                <div ng-if="loading" style="text-align: center; padding: 60px 0;">
+                    <div class="loading-text">Analyzing Chemical Pathways...</div>
+                </div>
+
+                <div ng-if="!loading">
+                    <div class="interaction-item" ng-repeat="item in interactions">
+                        <div style="flex: 1;">
+                            <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 5px;">{{item.pair}}</div>
+                            <div style="font-size: 0.9rem; opacity: 0.7; line-height: 1.5;">{{item.desc}}</div>
+                        </div>
+                        <div style="margin-left: 20px;">
+                            <span ng-class="item.severity === 'High' ? 'severity-high' : 'severity-mod'">
+                                {{item.severity}} Risk
+                            </span>
+                        </div>
+                    </div>
+
+                    <div ng-if="interactions.length == 0" style="text-align: center; padding: 40px; background: rgba(16, 185, 129, 0.05); border-radius: 12px; border: 1px dashed var(--success);">
+                        <div style="color: var(--success); font-size: 1.2rem; font-weight: 600;">✓ Clinical Clearance Granted</div>
+                        <div style="opacity: 0.6; font-size: 0.9rem; margin-top: 5px;">No severe or moderate drug interactions identified.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -135,8 +146,7 @@
             <a href="docter_prescription.html" class="btn btn-back">
                 <span>←</span> Modify Prescription
             </a>
-            
-            <button class="btn btn-next" ng-click="proceed()" ng-disabled="loading">
+            <button class="btn btn-next" ng-click="proceed()" ng-disabled="loading || medList.length == 0">
                 View Full Risk Report <span>→</span>
             </button>
         </div>
@@ -145,38 +155,46 @@
     <script>
         const app = angular.module('interactionApp', []);
         
-        // Connect to backend session
         app.config(['$httpProvider', function($httpProvider) {
             $httpProvider.defaults.withCredentials = true;
         }]);
 
-        app.controller('InteractionCtrl', function($scope, $timeout, $http) {
+        app.controller('InteractionCtrl', function($scope, $timeout) {
             $scope.loading = true;
-            
-            // 1. DATA FIX: Use 'docMedList' to match the prescription page
+            $scope.interactions = [];
+
+            // Read prescription from localStorage (saved by docter_prescription.html)
+            // Key is 'docMedList' — consistent across both pages.
             const rawData = localStorage.getItem('docMedList');
             $scope.medList = rawData ? JSON.parse(rawData) : [];
-            
-            // Get patient info for context
-            $scope.patient = JSON.parse(localStorage.getItem('current_patient') || '{}');
 
-            // 2. Simulated Clinical Analysis Delay
-            // This gives the "AI scanner" effect time to work
-            $timeout(function() {
-                $scope.runClinicalCheck();
+            // FIX: Normalise the med list. docter_prescription.html stores full objects
+            // {name, dose, freq}. Older code may have stored plain strings.
+            // getNames() gives a clean lowercase string array for all checks below.
+            function getNames() {
+                return $scope.medList.map(m => ((typeof m === 'object' ? m.name : m) || '').toLowerCase().trim());
+            }
+
+            $scope.patient = {};
+            try {
+                $scope.patient = JSON.parse(localStorage.getItem('current_patient') || '{}');
+            } catch(e) {}
+
+            if ($scope.medList.length === 0) {
                 $scope.loading = false;
-            }, 2500);
+            } else {
+                $timeout(function() {
+                    $scope.runClinicalCheck();
+                    $scope.loading = false;
+                }, 2500);
+            }
 
-            // 3. Clinical Logic
             $scope.runClinicalCheck = function() {
-                // Ensure we have a list to work with
-                if (!$scope.medList || $scope.medList.length === 0) return;
-
-                const names = $scope.medList.map(m => (m.name || '').toLowerCase().trim());
+                const names = getNames();
                 $scope.interactions = [];
 
-                // Check A: Aspirin + Warfarin (Anticoagulant Risk)
-                if(names.includes('aspirin') && names.includes('warfarin')) {
+                // Check A: Aspirin + Warfarin
+                if (names.includes('aspirin') && names.includes('warfarin')) {
                     $scope.interactions.push({
                         pair: "Aspirin + Warfarin",
                         severity: "High",
@@ -184,8 +202,8 @@
                     });
                 }
 
-                // Check B: Metformin + Iodine (Lactic Acidosis Risk)
-                if(names.includes('metformin') && (names.includes('iodine') || names.includes('contrast'))) {
+                // Check B: Metformin + Iodine contrast
+                if (names.includes('metformin') && (names.includes('iodine') || names.includes('contrast'))) {
                     $scope.interactions.push({
                         pair: "Metformin + Iodine Contrast",
                         severity: "High",
@@ -193,8 +211,12 @@
                     });
                 }
 
-                // Check C: Allergy Detection (Integration with Patient Data)
-                if($scope.patient.allergy && names.includes($scope.patient.allergy.toLowerCase())) {
+                // FIX: Check C — allergy check now reads patient.allergy correctly.
+                // Old code used $scope.patient.allergy but the patient object saved
+                // by docter_prescription.html uses the key 'allergy' (not 'allergies').
+                // Both are now consistent.
+                const patientAllergy = ($scope.patient.allergy || '').toLowerCase().trim();
+                if (patientAllergy && patientAllergy !== 'none' && names.includes(patientAllergy)) {
                     $scope.interactions.push({
                         pair: "Patient Allergy Conflict",
                         severity: "High",
@@ -202,9 +224,9 @@
                     });
                 }
 
-                // Check D: Therapeutic Duplication
+                // Check D: Duplicate therapy
                 const uniqueMeds = new Set(names);
-                if(uniqueMeds.size < names.length) {
+                if (uniqueMeds.size < names.length) {
                     $scope.interactions.push({
                         pair: "Redundant Therapy",
                         severity: "Moderate",
@@ -213,18 +235,18 @@
                 }
             };
 
-            // 4. Save and Move to Final Report
             $scope.proceed = function() {
-                // Save interactions so the Risk Report page can display them
                 localStorage.setItem('activeInteractions', JSON.stringify($scope.interactions));
-                
-                // Calculate a basic risk score based on severity
-                let score = 15; // Base score
+
+                // FIX: Risk score calculation now also reads the allergy flag from
+                // current_patient so it's consistent with what the prescription page
+                // calculated. Base of 15, +35 per High, +15 per Moderate, capped at 100.
+                let score = 15;
                 $scope.interactions.forEach(i => {
                     score += (i.severity === 'High' ? 35 : 15);
                 });
-                if(score > 100) score = 100;
-                
+                if (score > 100) score = 100;
+
                 localStorage.setItem('calculatedRiskScore', score);
                 window.location.href = 'doctor_risk_report.html';
             };

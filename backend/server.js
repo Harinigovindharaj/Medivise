@@ -13,7 +13,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+
 
 /* -------- SESSION -------- */
 app.use(session({
@@ -30,13 +30,13 @@ app.use(session({
 }));
 
 //TEMPORARY
-app.use((req, res, next) => {
-  if (!req.session.userId) {
-    req.session.userId = new mongoose.Types.ObjectId(); 
-    req.session.role = "pharmacist";
-  }
-  next();
-});
+// app.use((req, res, next) => {
+//   if (!req.session.userId) {
+//     req.session.userId = new mongoose.Types.ObjectId(); 
+//     req.session.role = "researcher";
+//   }
+//   next();
+// });
 
 const path = require("path");
 
@@ -77,6 +77,10 @@ const User = mongoose.model("User", new mongoose.Schema({
 // UPDATED Prescription model
 const Prescription = mongoose.model("Prescription", new mongoose.Schema({
   userId:    mongoose.Schema.Types.ObjectId,
+  patientName: String,   
+  patientAge:  Number,   
+  patientId:   String,   
+  risk:        Number,  
   image:     String,
   drugs:     [String],
   status:    String,
@@ -91,7 +95,7 @@ const Prescription = mongoose.model("Prescription", new mongoose.Schema({
   }
 }));
 
-// (Optional future use)
+
 const Drug = mongoose.model("Drug", new mongoose.Schema({
   name:         String,
   class:        String,
@@ -109,13 +113,12 @@ const Drug = mongoose.model("Drug", new mongoose.Schema({
 
 /* -------- ROUTES -------- */
 
-const goRoutes = require("./go.js")(User, Prescription, upload);
-app.use("/go", goRoutes);
-const doctorRoutes = require("./doctorRoutes.js")(Prescription);
+const goRoutes = require("./go.js")(User, Prescription, upload, null, Drug);
+const doctorRoutes = require("./doctorRoutes.js")(Prescription, User);
 const pharmacistRoutes  = require("./pharmacistRoutes.js")(Prescription);
 
 app.use("/go",          goRoutes);
-app.use("/doctor",      doctorRoutes);
+app.use("/api/doctor",      doctorRoutes);
 app.use("/pharmacist",  pharmacistRoutes); 
 
 /* -------- TEST -------- */

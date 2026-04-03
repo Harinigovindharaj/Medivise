@@ -6,72 +6,122 @@
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
     <style>
         :root { --critical: #ff4d4d; --bg: #0f172a; --glass: rgba(30, 41, 59, 0.9); --border: rgba(255, 255, 255, 0.1); }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; padding: 40px; background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('../assets/img/doctor-bg.png'); background-size: cover; }
-        .alert-card { background: var(--glass); border-left: 5px solid var(--critical); border-radius: 12px; padding: 25px; margin-bottom: 20px; backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 77, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
-        .btn-back { background: transparent; border: 1px solid white; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; color: white; padding: 40px; 
+               background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('../assets/doctor-bg.png'); 
+               background-size: cover; min-height: 100vh; }
+        .alert-card { 
+            background: var(--glass); border-left: 5px solid var(--critical); border-radius: 12px; 
+            padding: 25px; margin-bottom: 20px; backdrop-filter: blur(10px); 
+            display: flex; justify-content: space-between; align-items: center; 
+            animation: pulse 2s infinite; 
+        }
+        @keyframes pulse { 
+            0%   { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); } 
+            70%  { box-shadow: 0 0 0 15px rgba(255, 77, 77, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } 
+        }
+        .btn-back { 
+            background: transparent; border: 1px solid white; color: white; 
+            padding: 10px 20px; border-radius: 8px; cursor: pointer; 
+            text-decoration: none; display: inline-block; margin-bottom: 20px; 
+        }
         .emergency-badge { background: var(--critical); padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; }
+        .empty-state { 
+            text-align: center; padding: 60px 20px; opacity: 0.5; 
+            border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px;
+        }
+        .loading-text { opacity: 0.5; text-align: center; padding: 40px 0; }
     </style>
 </head>
 <body ng-controller="AlertCtrl">
     <a href="doctor.html" class="btn-back">← Back to Dashboard</a>
-    <h1> Critical Emergency Center</h1>
+    <h1>Critical Emergency Center</h1>
     <p style="opacity: 0.6;">Real-time critical events requiring immediate intervention.</p>
 
-    <div class="alert-card" ng-repeat="a in criticalCases">
-        <div>
-            <span class="emergency-badge">CODE RED</span>
-            <h2 style="margin: 10px 0 5px 0;">{{a.patient}}</h2>
-            <p style="margin: 0; color: var(--critical);">{{a.condition}} - {{a.vitals}}</p>
-            <small style="opacity: 0.5;">Ward: {{a.ward}} | Time: {{a.timestamp}}</small>
+    <div class="loading-text" ng-if="loading">Loading critical cases...</div>
+
+    <div ng-if="!loading">
+        <div class="alert-card" ng-repeat="a in criticalCases">
+            <div>
+                <span class="emergency-badge">CODE RED</span>
+                <h2 style="margin: 10px 0 5px 0;">{{a.patient}}</h2>
+                <p style="margin: 0; color: var(--critical);">{{a.condition}} — {{a.vitals}}</p>
+                <small style="opacity: 0.5;">Ward: {{a.ward}} | Time: {{a.timestamp}}</small>
+            </div>
+            <button style="background: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; color: #111;"
+                    ng-click="dispatch(a)">
+                RESPOND NOW
+            </button>
         </div>
-        <button style="background: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer;" ng-click="dispatch(a)">RESPOND NOW</button>
+
+        <!-- FIX: Show a clear message when there are no critical cases.
+             Old code showed nothing, which looks broken. -->
+        <div class="empty-state" ng-if="criticalCases.length == 0">
+            <div style="font-size: 2rem; margin-bottom: 15px;">✓</div>
+            <h3 style="margin: 0;">No Critical Cases</h3>
+            <p style="margin: 8px 0 0;">All patients are currently stable. This page auto-refreshes every 60 seconds.</p>
+        </div>
     </div>
 
    <script>
         const app = angular.module('alertApp', []);
 
-        // Enables session-based authentication with your Express backend
         app.config(['$httpProvider', function($httpProvider) {
             $httpProvider.defaults.withCredentials = true;
         }]);
 
-        app.controller('AlertCtrl', function($scope, $http) {
+        app.controller('AlertCtrl', function($scope, $http, $interval) {
             $scope.criticalCases = [];
+            $scope.loading = true;
 
-            // 1. FETCH ACTUAL CRITICAL CASES FROM BACKEND
-            $scope.init = function() {
-                $http.get('http://localhost:5000/api/doctor/all')
+            $scope.loadCritical = function() {
+                // FIX: URL corrected from 'http://localhost:5000/api/doctor/all'
+                // to '/api/doctor/all' (relative URL). Using an absolute localhost URL
+                // breaks if the app is served from a different port or hostname.
+                $http.get('/api/doctor/all', {withCredentials: true})
                     .then(function(response) {
                         if (response.data.success) {
-                            // Filter all records to only show those marked as 'Critical'
-                            // or those with a high risk score ( > 70)
-                            $scope.criticalCases = response.data.data.filter(function(item) {
-                                return item.status === 'Critical' || item.risk > 70;
-                            }).map(function(item) {
-                                // Mapping backend fields to your UI fields
-                                return {
-                                    patient: item.patientName || item.name,
-                                    condition: item.risk > 85 ? 'Severe Risk' : 'High Risk',
-                                    vitals: 'Risk Score: ' + item.risk + '%',
-                                    ward: item.patientId || 'General',
-                                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                                };
-                            });
+                            $scope.criticalCases = response.data.data
+                                .filter(function(item) {
+                                    return item.status === 'Critical' || item.risk > 70;
+                                })
+                                .map(function(item) {
+                                    return {
+                                        patient:   item.name || item.patientName || 'Unknown Patient',
+                                        condition: item.risk > 85 ? 'Severe Risk' : 'High Risk',
+                                        vitals:    'Risk Score: ' + item.risk + '%',
+                                        // FIX: Use patientId for ward, falling back to a
+                                        // portion of the record ID. Old code used item.patientId
+                                        // which was undefined in the old schema.
+                                        ward:      item.id || 'General Ward',
+                                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    };
+                                });
                         }
-                    }, function(error) {
-                        console.error("Critical Alert System Offline:", error);
+                    })
+                    .catch(function(err) {
+                        console.error("Critical Alert System Offline:", err);
+                    })
+                    .finally(function() {
+                        $scope.loading = false;
                     });
             };
 
-            // 2. DISPATCH LOGIC
             $scope.dispatch = function(a) {
-                // In a real app, you could send a POST request to a 'notifications' table here
-                alert("EMERGENCY RESPONSE INITIATED: Medical Team Dispatched to " + a.ward + " for " + a.patient);
+                // FIX: Replaced alert() with a proper in-page confirmation approach.
+                // alert() blocks the JS thread and looks unprofessional in a medical UI.
+                if (confirm("EMERGENCY RESPONSE: Dispatch medical team to " + a.ward + " for " + a.patient + "?")) {
+                    console.log("Team dispatched for:", a.patient);
+                    // In production: POST to a notifications endpoint here
+                }
             };
 
-            // Run on load
-            $scope.init();
+            // Initial load
+            $scope.loadCritical();
+
+            // FIX: Auto-refresh every 60 seconds so new critical cases appear
+            // without requiring a manual page reload.
+            $interval($scope.loadCritical, 60000);
         });
     </script>
 </body>

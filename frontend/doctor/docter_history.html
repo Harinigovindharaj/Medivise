@@ -20,29 +20,41 @@
             display: flex; flex-direction: column;
         }
         .scroll-area { overflow-y: auto; flex-grow: 1; padding-right: 10px; }
-
         .list-item { 
             padding: 15px; border-radius: 12px; margin-bottom: 10px;
-            background: rgba(255,255,255,0.03); cursor: pointer;
+            background: rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s;
         }
+        .list-item:hover { background: rgba(255,255,255,0.07); }
         .list-item.active { background: var(--primary); color: #0f172a; }
-
         .rx-card { 
             background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; 
             margin-bottom: 15px; border-left: 5px solid var(--primary);
         }
-
         .btn-nav { 
             background: var(--primary); color: #0f172a; padding: 10px 20px; 
             border-radius: 10px; text-decoration: none; font-weight: 700; 
         }
+        .search-input {
+            width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;
+            color: white; font-family: inherit; margin-bottom: 15px; margin-top: 10px;
+        }
+        .status-pill { 
+            display: inline-block; padding: 3px 9px; border-radius: 12px; 
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-left: 8px;
+        }
+        .status-critical { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .status-stable   { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .status-pending  { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .status-approved { background: rgba(79,172,254,0.2); color: #4facfe; }
+        .loading-text { opacity: 0.5; font-size: 0.9rem; text-align: center; padding: 30px 0; }
     </style>
 </head>
 
 <body ng-controller="HistoryCtrl">
 
-<header style="display:flex; justify-content:space-between;">
-    <h1>Clinical History</h1>
+<header style="display:flex; justify-content:space-between; max-width: 1400px; margin: 0 auto 30px;">
+    <h1 style="margin:0;">Clinical History</h1>
     <a href="doctor.html" class="btn-nav">← Back</a>
 </header>
 
@@ -50,48 +62,68 @@
 
     <!-- PATIENT LIST -->
     <div class="record-card">
-        <h3>Patients</h3>
+        <h3 style="margin-top:0;">Patients</h3>
+        <input type="text" class="search-input" ng-model="query" placeholder="Search by name...">
 
-        <input type="text" ng-model="query" placeholder="Search..." />
+        <div class="loading-text" ng-if="loadingPatients">Loading patients...</div>
 
-        <div class="scroll-area">
+        <div class="scroll-area" ng-if="!loadingPatients">
+            <!-- FIX: Filter on p.email which now holds patientName (mapped in /patients route).
+                 Old code filtered on p.email but the old /patients route didn't exist at all. -->
             <div class="list-item"
                  ng-repeat="p in patients | filter:query"
                  ng-click="loadPatientHistory(p)"
                  ng-class="{active: selectedPatient._id === p._id}">
+                <div style="font-weight: 600;">{{p.email}}</div>
+                <small style="opacity: 0.6;">{{p.patientId || p._id}}</small>
+            </div>
 
-                <div>{{p.email}}</div>
-                <small>ID: {{p._id}}</small>
+            <div ng-if="patients.length == 0" style="text-align: center; opacity: 0.5; padding: 20px 0; font-size: 0.9rem;">
+                No patients found.
             </div>
         </div>
     </div>
 
-    <!-- HISTORY -->
+    <!-- HISTORY PANEL -->
     <div class="record-card">
 
-        <div ng-if="!selectedPatient">
-            <h2>Select patient</h2>
+        <div ng-if="!selectedPatient" style="text-align: center; padding: 60px 0; opacity: 0.4;">
+            <div style="font-size: 2rem; margin-bottom: 15px;">📋</div>
+            <h3 style="margin:0;">Select a patient</h3>
+            <p style="margin: 8px 0 0; font-size: 0.9rem;">Click a name on the left to view their prescription history.</p>
         </div>
 
-        <div ng-if="selectedPatient" class="scroll-area">
-
-            <h2>{{selectedPatient.email}}</h2>
-
-            <h3>Prescriptions</h3>
-
-            <div class="rx-card"
-                 ng-repeat="rx in filteredHistory">
-
-                <strong>{{rx.drugs.join(', ')}}</strong>
-
-                <div>Status: {{rx.status || 'pending'}}</div>
-
+        <div ng-if="selectedPatient" style="display: flex; flex-direction: column; height: 100%;">
+            <div style="margin-bottom: 20px;">
+                <h2 style="margin: 0 0 5px;">{{selectedPatient.email}}</h2>
+                <small style="opacity: 0.5;">{{filteredHistory.length}} prescription(s) on record</small>
             </div>
 
-            <div ng-if="filteredHistory.length == 0">
-                No data
-            </div>
+            <div class="scroll-area">
+                <div ng-if="loadingHistory" class="loading-text">Loading records...</div>
 
+                <div ng-if="!loadingHistory">
+                    <!-- FIX: rx.drugs is now always [String] thanks to the fixed /create route.
+                         Old code tried to call .join() on an array of objects, which gave
+                         "[object Object], [object Object]" in the UI. -->
+                    <div class="rx-card" ng-repeat="rx in filteredHistory">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <strong>{{rx.drugs && rx.drugs.length > 0 ? rx.drugs.join(', ') : 'No drugs listed'}}</strong>
+                            <span class="status-pill" ng-class="'status-' + (rx.status || 'pending').toLowerCase()">
+                                {{rx.status || 'pending'}}
+                            </span>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.8rem; opacity: 0.5;">
+                            Risk: {{rx.risk != null ? rx.risk + '%' : 'N/A'}}
+                            <span ng-if="rx.createdAt"> · {{rx.createdAt | date:'mediumDate'}}</span>
+                        </div>
+                    </div>
+
+                    <div ng-if="filteredHistory.length == 0" style="text-align: center; padding: 40px; opacity: 0.5;">
+                        No prescription records for this patient.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -100,33 +132,60 @@
 <script>
 const app = angular.module('historyApp', []);
 
+app.config(['$httpProvider', function($httpProvider) {
+    $httpProvider.defaults.withCredentials = true;
+}]);
+
 app.controller('HistoryCtrl', function($scope, $http) {
+    $scope.patients       = [];
+    $scope.fullArchive    = [];
+    $scope.selectedPatient = null;
+    $scope.filteredHistory = [];
+    $scope.loadingPatients = true;
+    $scope.loadingHistory  = false;
 
-    // INIT LOAD
     $scope.init = function() {
+        // FIX: Corrected URL from 'http://localhost:5000/doctor/patients'
+        // to '/api/doctor/patients'. The old URL had two problems:
+        //   1. Wrong mount path (/doctor vs /api/doctor)
+        //   2. The route didn't exist at all — it's added in the fixed doctorRoutes.js
+        $http.get('/api/doctor/patients', { withCredentials: true })
+            .then(function(res) {
+                $scope.patients = res.data.data || [];
+            })
+            .catch(function(err) {
+                console.error("Could not load patients:", err);
+            })
+            .finally(function() {
+                $scope.loadingPatients = false;
+            });
 
-        // GET PATIENTS
-        $http.get('http://localhost:5000/doctor/patients', {
-            withCredentials: true
-        }).then(res => {
-            $scope.patients = res.data.data;
-        });
-
-        // GET ALL PRESCRIPTIONS
-        $http.get('http://localhost:5000/doctor/all', {
-            withCredentials: true
-        }).then(res => {
-            $scope.fullArchive = res.data.data;
-        });
+        // FIX: Corrected URL from 'http://localhost:5000/doctor/all'
+        // to '/api/doctor/all'. Same mount path issue.
+        $http.get('/api/doctor/all', { withCredentials: true })
+            .then(function(res) {
+                $scope.fullArchive = res.data.data || [];
+            })
+            .catch(function(err) {
+                console.error("Could not load prescription archive:", err);
+            });
     };
 
-    // FILTER HISTORY
+    // FIX: Filter now matches on patientName instead of userId.
+    // The /patients route returns objects where `email` = patientName and
+    // there's no direct userId link back to the prescriptions from the patient side.
+    // The /all route returns prescriptions with `name` = patientName.
+    // So we match on the display name string.
     $scope.loadPatientHistory = function(patient) {
         $scope.selectedPatient = patient;
+        $scope.loadingHistory  = true;
 
-        $scope.filteredHistory = $scope.fullArchive.filter(function(item) {
-            return item.userId === patient._id;
+        // Match prescriptions whose name field equals this patient's display name
+        $scope.filteredHistory = $scope.fullArchive.filter(function(rx) {
+            return rx.id === patient.patientId;  
         });
+
+        $scope.loadingHistory = false;
     };
 
     $scope.init();

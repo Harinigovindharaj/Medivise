@@ -34,7 +34,7 @@ function isDoctor(req, res, next) {
   next();
 }
 
-module.exports = (User, Prescription, upload, interactions) => {
+module.exports = (User, Prescription, upload, interactions, Drug) => {
     
 
 /* -------- AUTH -------- */
@@ -69,11 +69,7 @@ router.post("/login", async (req, res) => {
 
   let redirectUrl = "";
 
-  if (user.role === "patient") redirectUrl = "/patient";
-  else if (user.role === "doctor") redirectUrl = "/doctor";
-  else if (user.role === "pharmacist") redirectUrl = "/pharmacist";
-  else if (user.role === "admin") redirectUrl = "/admin";
-  else if (user.role === "researcher") redirectUrl = "/researcher";
+  redirectUrl = `/${user.role}/${user.role}.html`;
 
   res.json({
     message: "Logged in",
@@ -84,8 +80,9 @@ router.post("/login", async (req, res) => {
 
 // Logout
 router.get("/logout", (req, res) => {
+  console.log('logout')
   req.session.destroy(() => {
-    res.send("Logged out successfully!");
+    res.redirect("/index.html");
   });
 });
 
@@ -108,7 +105,7 @@ router.get("/patient", (req, res) => {
 });
 
 
-// 📄 View all prescriptions (previous uploads)
+// View all prescriptions (previous uploads)
 router.get("/patient/prescriptions", isPatient, async (req, res) => {
   const prescriptions = await Prescription.find({
     userId: req.session.userId
@@ -121,7 +118,7 @@ router.get("/patient/prescriptions", isPatient, async (req, res) => {
   })));
 });
 
-// 📄 View single prescription
+//  View single prescription
 router.get("/patient/prescription/:id", isPatient, async (req, res) => {
   const prescription = await Prescription.findById(req.params.id);
   if (!prescription) return res.send("Not found");
@@ -129,7 +126,7 @@ router.get("/patient/prescription/:id", isPatient, async (req, res) => {
   res.json(prescription);
 });
 
-// ✏️ Medication review (edit drugs / add / remove)
+// Medication review (edit drugs / add / remove)
 router.put("/patient/update-drugs", isPatient, async (req, res) => {
   const { prescriptionId, drugs } = req.body;
 
@@ -142,7 +139,7 @@ router.put("/patient/update-drugs", isPatient, async (req, res) => {
   res.send("Drugs updated");
 });
 
-// ⚠️ Patient-specific interaction analysis
+// Patient-specific interaction analysis
 const axios = require("axios");
 
 // Generate drug pairs
@@ -232,7 +229,7 @@ router.get("/patient/analysis/:id", isPatient, async (req, res) => {
   });
 });
 
-// 📊 Patient status (pharmacist decision + notes)
+// Patient status (pharmacist decision + notes)
 router.get("/patient/status/:id", isPatient, async (req, res) => {
   const prescription = await Prescription.findById(req.params.id);
   if (!prescription) return res.send("Not found");
@@ -315,7 +312,7 @@ router.get("/patient/report/:id", async (req, res) => {
   // FOOTER
   doc.moveDown();
   doc.fontSize(10).text(
-    "⚠️ Consult a healthcare professional before making any medication changes.",
+    "Consult a healthcare professional before making any medication changes.",
     { align: "center" }
   );
 
@@ -360,13 +357,33 @@ router.post("/admin/drugs", isAdmin, async (req, res) => {
 });
 
 router.get("/admin/drugs", isAdmin, async (req, res) => {
+  if (!Drug) return res.json([]);
   const drugs = await Drug.find();
   res.json(drugs);
 });
 
 router.get("/admin/logs", isAdmin, async (req, res) => {
-  const prescriptions = await Prescription.find();
+  const prescriptions = await Prescription.find().sort({ createdAt: -1 });
   res.json(prescriptions);
+});
+
+router.post("/admin/settings", isAdmin, async (req, res) => {
+  const { apiKey, backupInterval } = req.body;
+
+  // For now just log (or store in DB later)
+  console.log("Settings updated:", req.body);
+
+  res.send("Settings saved");
+});
+
+router.delete("/admin/drugs/:id", isAdmin, async (req, res) => {
+  try {
+    if (!Drug) return res.status(500).send("Drug model not available");
+    await Drug.findByIdAndDelete(req.params.id);
+    res.send("Drug deleted");
+  } catch (err) {
+    res.status(500).send("Error deleting drug");
+  }
 });
 
 router.get("/admin/reports", isAdmin, async (req, res) => {
@@ -383,7 +400,7 @@ router.get("/admin/settings", isAdmin, (req, res) => {
   res.send("System settings page");
 });
 
-//RESEARCHERR
+//RESEARCHER
 
 
 router.get("/researcher/dashboard", isResearcher, (req, res) => {

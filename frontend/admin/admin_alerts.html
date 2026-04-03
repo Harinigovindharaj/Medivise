@@ -26,5 +26,34 @@
             </div>
         </div>
     </main>
+    <script>
+        $(document).ready(function () {
+            $.get("http://localhost:5000/go/admin/logs", function(data) {
+
+                $('#alertContainer').empty();
+
+                data.forEach(p => {
+                    if (p.analysis?.overallRisk === "High") {
+
+                        $('#alertContainer').append(`
+                            <div class="alert-box">
+                                <div>
+                                    <strong>High Risk Prescription</strong><br>
+                                    <small>Prescription ID: ${p._id}</small>
+                                </div>
+                                <button class="resolve-btn" onclick="resolveAlert('${p._id}', this)">
+                                    Resolve
+                                </button>
+                            </div>
+                        `);
+                    }
+                });
+            });
+        });
+
+        function resolveAlert(id, btn) {
+            $(btn).parent().fadeOut();
+        }
+    </script>
 </body>
 </html>

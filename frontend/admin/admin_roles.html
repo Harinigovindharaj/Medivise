@@ -6,7 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --card-bg: rgba(15, 23, 42, 0.85); --border: rgba(255, 255, 255, 0.1); --text-muted: #94a3b8; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)), url('../assets/img/research-bg.png') no-repeat center center fixed; background-size: cover; color: #f1f5f9; display: flex; min-height: 100vh; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)), url('../assets/research-bg.png') no-repeat center center fixed; background-size: cover; color: #f1f5f9; display: flex; min-height: 100vh; }
         .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; border-right: 1px solid var(--border); backdrop-filter: blur(10px); position: fixed; height: 100vh; }
         .nav-back { padding: 12px 15px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; font-weight: bold; }
         .main-content { flex: 1; margin-left: 310px; padding: 40px; }
@@ -67,27 +67,51 @@
     </main>
 
     <script>
-        $(document).ready(function() {
-            // Remove functionality
-            $(document).on('click', '.btn-delete', function() {
-                if(confirm("Are you sure you want to remove this role?")) {
-                    $(this).closest('tr').fadeOut();
-                }
-            });
+        $(document).ready(function () {
+            function loadUsers() {
+                $.get("http://localhost:5000/go/admin/users", function(users) {
 
-            // Add functionality simulation
-            $('#addRoleBtn').click(function() {
-                const newRow = `<tr>
-                    <td><strong>New Security Role</strong></td>
-                    <td>View Only</td>
-                    <td>No</td>
-                    <td>
-                        <button class="btn-edit">Edit</button>
-                        <button class="btn-delete">Remove</button>
-                    </td>
-                </tr>`;
-                $('#roleTable tbody').append(newRow);
-            });
+                    $('#roleTable tbody').empty();
+
+                    users.forEach(u => {
+                        $('#roleTable tbody').append(`
+                            <tr>
+                                <td><strong>${u.email}</strong></td>
+                                <td>${u.role}</td>
+                                <td>-</td>
+                                <td>
+                                    <button onclick="changeRole('${u._id}')">Change Role</button>
+                                    <button onclick="deleteUser('${u._id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                });
+            }
+
+            loadUsers();
+
+            window.deleteUser = function(id) {
+                if (!confirm("Delete user?")) return;
+
+                $.ajax({
+                    url: `http://localhost:5000/go/admin/users/${id}`,
+                    type: "DELETE",
+                    success: loadUsers
+                });
+            };
+
+            window.changeRole = function(id) {
+                const newRole = prompt("Enter new role (admin/patient/pharmacist/etc)");
+
+                $.ajax({
+                    url: "http://localhost:5000/go/admin/users/role",
+                    type: "PUT",
+                    contentType: "application/json",
+                    data: JSON.stringify({ userId: id, role: newRole }),
+                    success: loadUsers
+                });
+            };
         });
     </script>
 </body>

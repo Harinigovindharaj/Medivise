@@ -109,7 +109,6 @@
             </div>
             
             <div class="search-container">
-                <span>🔍</span>
                 <input type="text" class="search-input" placeholder="Search patients..." ng-model="searchQuery">
             </div>
         </div>
@@ -192,7 +191,7 @@
             // 1. CONNECT TO BACKEND: Fetch all prescriptions/patients
             $scope.init = function() {
                 // Calling the router.get("/all") route from your Express code
-                $http.get('http://localhost:5000/api/doctor/all') 
+                $http.get('/api/doctor/all', {withCredentials: true}) 
                     .then(function(response) {
                         if (response.data.success) {
                             // Map backend data to your table

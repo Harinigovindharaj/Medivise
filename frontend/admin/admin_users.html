@@ -14,8 +14,15 @@
         .btn-main { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         table { width: 100%; background: var(--card-bg); border-radius: 12px; border-collapse: collapse; overflow: hidden; }
         th, td { padding: 18px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--accent); font-size: 12px; text-transform: uppercase; }
         .btn-edit { color: var(--accent); background: none; border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .btn-del { color: #ef4444; background: none; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        .btn-del  { color: #ef4444; background: none; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        .btn-edit:hover { background: var(--accent); color: #000; }
+        .btn-del:hover  { background: #ef4444; color: #fff; }
+        select { background: #1e293b; color: #f1f5f9; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; }
+        .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: #000; padding: 12px 22px; border-radius: 8px; font-weight: bold; display: none; z-index: 999; }
+        .toast.error { background: #ef4444; color: #fff; }
+        .empty-row td { color: #64748b; text-align: center; padding: 40px; }
     </style>
 </head>
 <body>
@@ -26,25 +33,107 @@
     <main class="main-content">
         <div class="action-header">
             <h1>User Management</h1>
-            <button class="btn-main" id="addUser">+ Add New User</button>
         </div>
         <table>
-            <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead>
+                <tr><th>Email</th><th>Role</th><th>Actions</th></tr>
+            </thead>
             <tbody id="userTable">
-                <tr>
-                    <td><strong>Dr. Julian Bashir</strong></td>
-                    <td>Doctor</td>
-                    <td style="color:#10b981;">Active</td>
-                    <td><button class="btn-edit">Edit</button><button class="btn-del">Remove</button></td>
-                </tr>
+                <tr class="empty-row"><td colspan="3">Loading users...</td></tr>
             </tbody>
         </table>
     </main>
+
+    <div class="toast" id="toast"></div>
+
     <script>
-        $(document).on('click', '.btn-del', function() { if(confirm("Delete user?")) $(this).closest('tr').remove(); });
-        $('#addUser').click(function() { 
-            $('#userTable').append(`<tr><td><strong>New Staff</strong></td><td>Nurse</td><td style="color:#10b981;">Pending</td><td><button class="btn-edit">Edit</button><button class="btn-del">Remove</button></td></tr>`);
+        const BASE = "http://localhost:5000/go";
+        const ROLES = ["patient", "doctor", "pharmacist", "admin", "researcher"];
+
+        function showToast(msg, isError = false) {
+            const t = $("#toast");
+            t.text(msg).removeClass("error").toggleClass("error", isError).fadeIn(200);
+            setTimeout(() => t.fadeOut(400), 2500);
+        }
+
+        function loadUsers() {
+            $.ajax({
+                url: BASE + "/admin/users",
+                method: "GET",
+                xhrFields: { withCredentials: true },
+                success: function(users) {
+                    const tbody = $("#userTable");
+                    tbody.empty();
+
+                    if (!users.length) {
+                        tbody.append('<tr class="empty-row"><td colspan="3">No users found.</td></tr>');
+                        return;
+                    }
+
+                    users.forEach(function(user) {
+                        const roleOptions = ROLES.map(r =>
+                            `<option value="${r}" ${r === user.role ? "selected" : ""}>${r.charAt(0).toUpperCase() + r.slice(1)}</option>`
+                        ).join("");
+
+                        const row = `
+                            <tr data-id="${user._id}">
+                                <td>${user.email || "—"}</td>
+                                <td>
+                                    <select class="role-select">
+                                        ${roleOptions}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button class="btn-edit save-role-btn">Save Role</button>
+                                    <button class="btn-del delete-btn">Remove</button>
+                                </td>
+                            </tr>`;
+                        tbody.append(row);
+                    });
+                },
+                error: function() {
+                    $("#userTable").html('<tr class="empty-row"><td colspan="3" style="color:#ef4444;">Failed to load users. Are you logged in as admin?</td></tr>');
+                }
+            });
+        }
+
+        // Save role change
+        $(document).on("click", ".save-role-btn", function() {
+            const row = $(this).closest("tr");
+            const userId = row.data("id");
+            const role = row.find(".role-select").val();
+
+            $.ajax({
+                url: BASE + "/admin/users/role",
+                method: "PUT",
+                contentType: "application/json",
+                xhrFields: { withCredentials: true },
+                data: JSON.stringify({ userId, role }),
+                success: function() { showToast("Role updated successfully!"); },
+                error: function()   { showToast("Failed to update role.", true); }
+            });
         });
+
+        // Delete user
+        $(document).on("click", ".delete-btn", function() {
+            const row = $(this).closest("tr");
+            const userId = row.data("id");
+
+            if (!confirm("Permanently delete this user?")) return;
+
+            $.ajax({
+                url: BASE + "/admin/users/" + userId,
+                method: "DELETE",
+                xhrFields: { withCredentials: true },
+                success: function() {
+                    row.fadeOut(300, function() { $(this).remove(); });
+                    showToast("User deleted.");
+                },
+                error: function() { showToast("Failed to delete user.", true); }
+            });
+        });
+
+        loadUsers();
     </script>
 </body>
 </html>

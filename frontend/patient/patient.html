@@ -9,7 +9,7 @@
         :root { --primary: #7091ff; --accent: #00f2fe; --glass: rgba(255, 255, 255, 0.1); }
         body { 
             margin: 0; font-family: 'Inter', sans-serif; color: white; 
-            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url('frontend/assets/pills.jpg') no-repeat center center fixed; 
+            background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url('../assets/pills.jpg') no-repeat center center fixed; 
             background-size: cover; 
         }
         .app-wrapper { display: flex; min-height: 100vh; }
@@ -31,6 +31,7 @@
             <div class="nav-item" onclick="location.href='patient_prescription.html'">📤 Upload New</div>
             <div class="nav-item" onclick="location.href='patient_alert.html'">🔔 Alerts</div>
             <div class="nav-item" onclick="location.href='patient_history.html'">📂 History</div>
+            <div class="nav-item" ng-click="logout()">Sign Out</div>
         </aside>
 
         <main class="main-content">
@@ -62,7 +63,14 @@
 
     <script>
         angular.module('dashApp', []).controller('DashCtrl', function($scope, $http) {
-
+            $scope.logout = function () {
+                fetch("/go/logout", { credentials: "include" })
+                    .then(() => {
+                        console.log("Logged out successfully");
+                        window.location.href = "/index.html";
+                        console.log("Redirected to index.html");
+                    });
+            }
             // Get prescriptions (history)
             $http.get('http://localhost:5000/go/patient/prescriptions', {
                 withCredentials: true

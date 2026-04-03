@@ -276,6 +276,19 @@
             $scope.sendToPharmacist = function() {
                 alert("Report submitted to your pharmacy's clinical queue.");
             };
+
+            $scope.goToRiskAnalysis = function() {
+                const id = sessionStorage.getItem("prescriptionId");
+
+                if (!id) {
+                    alert("No prescription ID found. Please upload prescription again.");
+                    return;
+                }
+
+                console.log("Redirecting with ID:", id);
+
+                window.location.href = `patient_riskAnalysis.html?id=${id}`;
+            };
         });
     </script>
 </body>

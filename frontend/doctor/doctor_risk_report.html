@@ -13,7 +13,7 @@
         body {
             margin: 0; font-family: 'Inter', sans-serif; color: #f1f5f9;
             background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), 
-                        url('E:/medivise/assets/img/doctor-bg.png') no-repeat center center fixed;
+                        url('../assets/doctor-bg.png') no-repeat center center fixed;
             background-size: cover; min-height: 100vh;
         }
         .navbar { padding: 15px 40px; background: rgba(0, 0, 0, 0.4); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(10px); }
@@ -30,8 +30,9 @@
         .btn-outline { background: transparent; border: 1px solid var(--border); color: white; }
         .btn-success { background: var(--success); color: white; }
         .badge { padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-        .bg-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .bg-danger  { background: rgba(239, 68, 68, 0.2); color: var(--danger);  border: 1px solid var(--danger); }
         .bg-success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .bg-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
     </style>
 </head>
@@ -50,38 +51,59 @@
             <div class="tab" ng-class="{active: step == 8}" ng-click="setStep(8)">8. Approval</div>
         </div>
 
+        <!-- TAB 5: Risk Analysis -->
         <div class="glass-card" ng-show="step == 5">
             <div style="text-align: center;">
+                <!-- FIX: Score circle border color now reflects the actual risk level -->
                 <div class="score-circle" ng-style="{'border-color': getRiskColor()}">{{riskScore}}</div>
                 <h3 style="margin:0;">Clinical Risk Score</h3>
-                <p style="opacity: 0.6;">Based on current drug profile and patient vitals.</p>
+                <p style="opacity: 0.6;">Based on drug interaction analysis and patient profile.</p>
+                <!-- FIX: Show patient name for context -->
+                <p style="opacity: 0.4; font-size: 0.85rem;" ng-if="patient.name">
+                    Patient: {{patient.name}}
+                </p>
             </div>
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0;">
-            <h4>Risk Factors</h4>
-            <div class="item-row">
-                <span>Contraindication Severity</span>
-                <span class="badge bg-danger">High Risk</span>
+            <h4>Active Interaction Flags</h4>
+
+            <!-- FIX: Show the actual interactions from docter_interaction.html instead
+                 of hardcoded "High Risk / Optimal" rows. If there are none, show
+                 a green clearance message. -->
+            <div ng-if="activeInteractions.length > 0">
+                <div class="item-row" ng-repeat="i in activeInteractions"
+                     ng-style="border-left: 4px solid {{i.severity === 'High' ? 'var(--danger)' : 'var(--warning)'}};">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">{{i.pair}}</div>
+                        <small style="opacity: 0.6;">{{i.desc}}</small>
+                    </div>
+                    <span class="badge" ng-class="i.severity === 'High' ? 'bg-danger' : 'bg-warning'">
+                        {{i.severity}}
+                    </span>
+                </div>
             </div>
-            <div class="item-row">
-                <span>Renal Clearance Forecast</span>
-                <span class="badge bg-success">Optimal</span>
+            <div ng-if="activeInteractions.length == 0" style="text-align: center; padding: 30px; background: rgba(16,185,129,0.05); border-radius: 10px; border: 1px dashed var(--success);">
+                <div style="color: var(--success); font-weight: 600;">✓ No Interaction Flags</div>
+                <div style="opacity: 0.6; font-size: 0.85rem; margin-top: 5px;">Prescription passed all interaction checks.</div>
             </div>
+
             <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
                 <button class="btn btn-primary" ng-click="setStep(6)">View Recommendations</button>
             </div>
         </div>
 
+        <!-- TAB 6: Recommendations -->
         <div class="glass-card" ng-show="step == 6">
             <h3>Clinical Optimization</h3>
             <p style="opacity: 0.6;">Suggested adjustments to improve safety.</p>
             
-            <div class="item-row" ng-repeat="rec in recommendations" style="border-left: 4px solid {{rec.applied ? 'var(--success)' : 'var(--warning)'}};">
+            <div class="item-row" ng-repeat="rec in recommendations"
+                 ng-style="border-left: 4px solid + {{rec.applied ? 'var(--success)' : 'var(--warning)'}};">
                 <div>
                     <div style="font-weight: 600;">{{rec.title}}</div>
                     <small style="opacity: 0.5;">{{rec.desc}}</small>
                 </div>
                 <button class="btn" ng-class="rec.applied ? 'btn-success' : 'btn-primary'" ng-click="applyRec(rec)">
-                    {{rec.applied ? 'Applied' : 'Apply'}}
+                    {{rec.applied ? 'Applied ✓' : 'Apply'}}
                 </button>
             </div>
 
@@ -91,6 +113,7 @@
             </div>
         </div>
 
+        <!-- TAB 7: Final Report -->
         <div class="glass-card" ng-show="step == 7">
             <div style="display: flex; justify-content: space-between;">
                 <h3>Audit Report Preview</h3>
@@ -98,11 +121,25 @@
             </div>
             <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 12px; margin-top: 20px;">
                 <p style="margin-bottom: 20px;"><span class="badge bg-success">Generated by AI Engine</span></p>
-                <div ng-repeat="med in meds" style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <strong>{{med.name}}</strong> — {{med.dose}}mg | {{med.freq}}
+
+                <!-- FIX: Show patient details in the report -->
+                <div ng-if="patient.name" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                    <div><strong>Patient:</strong> {{patient.name}}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.6;">ID: {{patient.id}} | Age: {{patient.age}}</div>
                 </div>
+
+                <div ng-repeat="med in meds" style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <!-- FIX: Guard against undefined fields — old code would show
+                         "undefined — undefinedmg | undefined" if any field was missing. -->
+                    <strong>{{med.name || med}}</strong>
+                    <span ng-if="med.dose"> — {{med.dose}}mg</span>
+                    <span ng-if="med.freq"> | {{med.freq}}</span>
+                </div>
+
                 <div style="margin-top: 20px; font-size: 0.85rem; opacity: 0.7;">
-                    Applied Recommendations: {{ (recommendations | filter:{applied:true}).length }}
+                    Risk Score: <strong>{{riskScore}}</strong><br>
+                    Applied Recommendations: {{ (recommendations | filter:{applied:true}).length }}<br>
+                    Active Interactions: {{activeInteractions.length}}
                 </div>
             </div>
             <div style="display: flex; justify-content: space-between; margin-top: 40px;">
@@ -111,6 +148,7 @@
             </div>
         </div>
 
+        <!-- TAB 8: Approval -->
         <div class="glass-card" ng-show="step == 8">
             <div ng-if="!isApproved">
                 <h3 style="text-align: center; color: var(--accent);">Final Physician Approval</h3>
@@ -119,15 +157,20 @@
                 <div style="margin: 30px 0;">
                     <label style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 8px; display: block;">Electronic Signature & Clinical Notes</label>
                     <textarea ng-model="approvalNotes" class="btn-outline" 
-                              style="width: 100%; height: 120px; padding: 15px; border-radius: 8px; color: white; resize: none;" 
+                              style="width: 100%; height: 120px; padding: 15px; border-radius: 8px; color: white; resize: none; box-sizing: border-box;" 
                               placeholder="Type notes to finalize..."></textarea>
                     <small style="color: var(--danger)" ng-if="!approvalNotes">Notes are required for clinical audit trail.</small>
                 </div>
 
+                <!-- FIX: Show server error inline instead of an alert() popup -->
+                <div ng-if="submitError" style="background: rgba(239,68,68,0.1); border: 1px solid var(--danger); border-radius: 8px; padding: 12px 16px; margin-bottom: 15px; font-size: 0.85rem; color: var(--danger);">
+                    {{submitError}}
+                </div>
+
                 <div style="display: flex; gap: 15px; margin-top: 20px;">
                     <button class="btn btn-outline" style="flex: 1;" ng-click="setStep(7)">Back</button>
-                    <button class="btn btn-success" style="flex: 2;" ng-disabled="!approvalNotes" ng-click="finish()">
-                        Approve & Send to Pharmacy
+                    <button class="btn btn-success" style="flex: 2;" ng-disabled="!approvalNotes || submitting" ng-click="finish()">
+                        {{submitting ? 'Transmitting...' : 'Approve & Send to Pharmacy'}}
                     </button>
                 </div>
             </div>
@@ -136,7 +179,6 @@
                 <div style="font-size: 4rem; color: var(--success); margin-bottom: 20px;">✓</div>
                 <h2 style="color: var(--success);">Prescription Transmitted</h2>
                 <p style="opacity: 0.7; margin-bottom: 40px;">The order has been successfully sent to the Hospital Pharmacy System (HIS).</p>
-                
                 <button class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem;" ng-click="goToDashboard()">
                     Return to Dashboard
                 </button>
@@ -147,28 +189,42 @@
     <script>
         const app = angular.module('clinicalApp', []);
 
-        // Required to send session cookies to the Express backend
         app.config(['$httpProvider', function($httpProvider) {
             $httpProvider.defaults.withCredentials = true;
         }]);
 
         app.controller('FinalCtrl', function($scope, $window, $http) {
             $scope.step = 5;
-            $scope.riskScore = 82; // In a real app, this would be calculated dynamically
             $scope.approvalNotes = "";
             $scope.isApproved = false;
-            
-            // Retrieve data from previous steps
+            $scope.submitting = false;
+            $scope.submitError = null;
+
+            // FIX: Read riskScore from localStorage (set by docter_interaction.html).
+            // Old code hardcoded 82 and never read the calculated value.
+            $scope.riskScore = parseInt(localStorage.getItem('calculatedRiskScore') || '50');
+
+            // Read meds and patient saved by earlier pages
             $scope.meds = JSON.parse(localStorage.getItem('docMedList') || '[]');
-            $scope.patient = JSON.parse(localStorage.getItem('current_patient') || '{}');
+            $scope.patient = {};
+            try { $scope.patient = JSON.parse(localStorage.getItem('current_patient') || '{}'); } catch(e) {}
+
+            // FIX: Read the actual interactions from docter_interaction.html instead
+            // of ignoring them. This populates both tab 5 and the report in tab 7.
+            $scope.activeInteractions = [];
+            try { $scope.activeInteractions = JSON.parse(localStorage.getItem('activeInteractions') || '[]'); } catch(e) {}
 
             $scope.recommendations = [
                 { title: 'Switch to Clopidogrel', desc: 'Alternative for high-bleeding-risk profiles.', applied: false },
                 { title: 'Taper Lisinopril', desc: 'Suggested reduction to 5mg based on renal data.', applied: false }
             ];
 
-            $scope.setStep = function(n) { if(!$scope.isApproved) $scope.step = n; };
+            $scope.setStep = function(n) { if (!$scope.isApproved) $scope.step = n; };
             $scope.applyRec = function(item) { item.applied = !item.applied; };
+
+            $scope.goToDashboard = function() {
+                $window.location.href = '/doctor/doctor.html';
+            };
 
             $scope.getRiskColor = function() {
                 if ($scope.riskScore > 70) return '#ef4444';
@@ -176,52 +232,46 @@
                 return '#10b981';
             };
 
-            // --- BACKEND INTEGRATION: SAVE TO DATABASE ---
+            // FIX: finish() now sends all required fields that doctorRoutes.js /create
+            // expects. Old code sent name/dose/freq from meds[0] but the backend
+            // route was reading the `drugs` array — nothing was saving properly.
+            // Now we send the full drugs array plus all patient fields.
             $scope.finish = function() {
-                // Prepare the data to match your teammate's MongoDB Schema
-                // Since your schema handles one medication per entry, we map the list
-                const prescriptionData = {
+                $scope.submitting = true;
+                $scope.submitError = null;
+
+                const drugNames = $scope.meds
+                    .map(m => typeof m === 'object' ? m.name : m)
+                    .filter(Boolean);
+
+                const payload = {
+                    drugs: drugNames,
                     patientName: $scope.patient.name,
-                    patientAge: $scope.patient.age,
+                    patientAge: isNaN(Number($scope.patient.age)) ? null : Number($scope.patient.age),
                     patientId: $scope.patient.id,
-                    // Sending the first med's details (or you can loop to send multiple)
-                    name: $scope.meds[0].name,
-                    dose: $scope.meds[0].dose,
-                    freq: $scope.meds[0].freq,
-                    risk: $scope.riskScore,
+                    risk: Number($scope.riskScore) || 0,
                     status: $scope.riskScore > 70 ? 'Critical' : 'Stable'
                 };
 
-                $http.post('http://localhost:5000/api/doctor/create', prescriptionData)
-                    .then(function(response) {
-                        if (response.data.success) {
+                $http.post('/api/doctor/create', payload, { withCredentials: true })
+                    .then(function(res) {
+                        if (res.data.success) {
                             $scope.isApproved = true;
-                            
-                            // Let the dashboard know a new Rx was processed
-                            localStorage.setItem('last_processed_rx', JSON.stringify({
-                                patientName: $scope.patient.name,
-                                riskScore: $scope.riskScore
-                            }));
-                            
-                            // Increment local session count
-                            let count = parseInt(localStorage.getItem('session_rx_count') || '0');
-                            localStorage.setItem('session_rx_count', count + 1);
+
+                            localStorage.removeItem('docMedList');
+                            localStorage.removeItem('activeInteractions');
+                            localStorage.removeItem('calculatedRiskScore');
+                            localStorage.removeItem('current_patient');
                         }
-                    }, function(error) {
-                        console.error("Transmission failed:", error);
-                        alert("Database connection error. Please ensure the server is running.");
+                    })
+                    .catch(function(err) {
+                        console.error(err);
+                        $scope.submitError = err.data?.error || "Server error";
+                    })
+                    .finally(function() {
+                        $scope.submitting = false;
                     });
             };
-
-            $scope.goToDashboard = function() {
-                $window.location.href = 'doctor.html';
-            };
-
-            $scope.goBackToInteraction = function() {
-                $window.location.href = 'docter_interaction.html';
-            };
-
-            $scope.printReport = function() { alert("Audit PDF generated and saved."); };
         });
     </script>
 </body>

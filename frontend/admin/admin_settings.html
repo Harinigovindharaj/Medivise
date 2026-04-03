@@ -33,5 +33,24 @@
             <button class="save-btn" onclick="alert('Configuration Saved!')">Update System</button>
         </div>
     </main>
+    <script>
+        $('.save-btn').click(function () {
+            const apiKey = $('input[type="password"]').val();
+            const interval = $('input[type="number"]').val();
+
+            $.ajax({
+                url: "http://localhost:5000/go/admin/settings",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    apiKey,
+                    backupInterval: interval
+                }),
+                success: function () {
+                    alert("Settings saved to backend");
+                }
+            });
+        });
+    </script>
 </body>
 </html>
