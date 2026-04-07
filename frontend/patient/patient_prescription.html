@@ -1,278 +1,450 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" ng-app="patientApp">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>MediVise Patient | Advanced Analysis</title>
-    
+
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        :root {
-            --primary: #6366f1; --success: #2dd4bf; --danger: #f43f5e;
-            --glass: rgba(15, 23, 42, 0.9);
-        }
+      :root {
+        --primary: #6366f1;
+        --success: #2dd4bf;
+        --danger: #f43f5e;
+        --glass: rgba(15, 23, 42, 0.9);
+      }
 
-        body {
-            margin: 0; font-family: 'Inter', sans-serif;
-            background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), 
-                        url('frontend/assets/pills.jpg'); 
-            background: #111;
-            background-size: cover; background-attachment: fixed; color: white;
-        }
+      body {
+        margin: 0;
+        font-family: "Inter", sans-serif;
+        background:
+          linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)),
+          url("frontend/assets/pills.jpg");
+        background: #111;
+        background-size: cover;
+        background-attachment: fixed;
+        color: white;
+      }
 
-        /* NAV & STEPS */
-        .navbar { background: rgba(0, 0, 0, 0.5); padding: 15px 40px; display: flex; justify-content: space-between; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .step-pill { background: rgba(255,255,255,0.1); padding: 8px 20px; border-radius: 20px; opacity: 0.4; transition: 0.5s; }
-        .step-pill.active { background: var(--primary); opacity: 1; box-shadow: 0 0 15px var(--primary); }
+      /* NAV & STEPS */
+      .navbar {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 15px 40px;
+        display: flex;
+        justify-content: space-between;
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .step-pill {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 20px;
+        border-radius: 20px;
+        opacity: 0.4;
+        transition: 0.5s;
+      }
+      .step-pill.active {
+        background: var(--primary);
+        opacity: 1;
+        box-shadow: 0 0 15px var(--primary);
+      }
 
-        .container { max-width: 900px; margin: 40px auto; padding-bottom: 50px; }
-        .glass-card { 
-            background: var(--glass); border: 2px solid #2dd4bf55; border-radius: 25px; 
-            padding: 40px; text-align: center; backdrop-filter: blur(20px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
+      .container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding-bottom: 50px;
+      }
+      .glass-card {
+        background: var(--glass);
+        border: 2px solid #2dd4bf55;
+        border-radius: 25px;
+        padding: 40px;
+        text-align: center;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      }
 
-        /* TABLE & INPUTS */
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; text-align: left; }
-        th { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; opacity: 0.6; }
-        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      /* TABLE & INPUTS */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        text-align: left;
+      }
+      th {
+        padding: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 0.8rem;
+        opacity: 0.6;
+      }
+      td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
 
-        .edit-input {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
-            color: white; padding: 10px; border-radius: 8px; width: 90%; transition: 0.3s;
-        }
-        .edit-input:focus { border-color: var(--success); background: rgba(255,255,255,0.15); outline: none; }
+      .edit-input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        width: 90%;
+        transition: 0.3s;
+      }
+      .edit-input:focus {
+        border-color: var(--success);
+        background: rgba(255, 255, 255, 0.15);
+        outline: none;
+      }
 
-        /* BUTTONS */
-        .btn { border: none; padding: 12px 25px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-next { background: var(--primary); color: white; }
-        .btn-back { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.2); }
-        .btn-done { background: var(--success); color: #020617; }
-        .btn-add { background: transparent; border: 1px solid var(--success); color: var(--success); font-size: 0.75rem; padding: 5px 12px; }
+      /* BUTTONS */
+      .btn {
+        border: none;
+        padding: 12px 25px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.3s;
+      }
+      .btn-next {
+        background: var(--primary);
+        color: white;
+      }
+      .btn-back {
+        background: transparent;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .btn-done {
+        background: var(--success);
+        color: #020617;
+      }
+      .btn-add {
+        background: transparent;
+        border: 1px solid var(--success);
+        color: var(--success);
+        font-size: 0.75rem;
+        padding: 5px 12px;
+      }
 
-        .nav-link { background: #1e293b; color: white; border: 1px solid #334155; padding: 8px 15px; border-radius: 8px; cursor: pointer; }
+      .nav-link {
+        background: #1e293b;
+        color: white;
+        border: 1px solid #334155;
+        padding: 8px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
 
-        /* CHART BOX */
-        .chart-box { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; margin-top: 20px; min-height: 250px; }
+      /* CHART BOX */
+      .chart-box {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        margin-top: 20px;
+        min-height: 250px;
+      }
     </style>
-</head>
-<body ng-controller="PatientCtrl">
-
+  </head>
+  <body ng-controller="PatientCtrl">
     <nav class="navbar">
-        <h2 style="margin:0;">MediVise <span style="font-weight:200">Patient</span></h2>
-        <button type="button" class="nav-link" ng-click="confirmExit()"> Back to Dashboard</button>
-
+      <h2 style="margin: 0">
+        MediVise <span style="font-weight: 200">Patient</span>
+      </h2>
+      <button type="button" class="nav-link" ng-click="confirmExit()">
+        Back to Dashboard
+      </button>
     </nav>
 
     <div class="container">
-        <div style="display:flex; justify-content:center; gap:15px; margin-bottom:30px;">
-            <div class="step-pill" ng-class="{active: step==1}">1. Upload</div>
-            <div class="step-pill" ng-class="{active: step==2}">2. Review & Edit</div>
-            <div class="step-pill" ng-class="{active: step==3}">3. Finalize</div>
+      <div
+        style="
+          display: flex;
+          justify-content: center;
+          gap: 15px;
+          margin-bottom: 30px;
+        "
+      >
+        <div class="step-pill" ng-class="{active: step==1}">1. Upload</div>
+        <div class="step-pill" ng-class="{active: step==2}">
+          2. Review & Edit
+        </div>
+        <div class="step-pill" ng-class="{active: step==3}">3. Finalize</div>
+      </div>
+
+      <div class="glass-card" ng-show="step == 1">
+        <div style="font-size: 50px; margin-bottom: 20px">📄</div>
+        <h2>Upload Prescription</h2>
+        <p style="opacity: 0.7">
+          Select your prescription file for AI scanning.
+        </p>
+        <input type="file" id="fileInput" style="margin: 20px 0" />
+        <br />
+        <button type="button" class="btn btn-next" ng-click="moveNext()">
+          Next: Review Data →
+        </button>
+      </div>
+
+      <div class="glass-card" ng-show="step == 2">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <h3 style="margin: 0">Drug Inventory & Risk Analysis</h3>
+          <button type="button" class="btn btn-add" ng-click="addMed()">
+            + Add Medicine
+          </button>
         </div>
 
-        <div class="glass-card" ng-show="step == 1">
-            <div style="font-size: 50px; margin-bottom: 20px;">📄</div>
-            <h2>Upload Prescription</h2>
-            <p style="opacity: 0.7;">Select your prescription file for AI scanning.</p>
-            <input type="file" id="fileInput" style="margin: 20px 0;">
-            <br>
-            <button type="button" class="btn btn-next" ng-click="moveNext()">Next: Review Data →</button>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap">
+          <div style="flex: 1; min-width: 300px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Dosage</th>
+                  <th style="width: 30px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="med in medications">
+                  <td>
+                    <input
+                      type="text"
+                      class="edit-input"
+                      ng-model="med.name"
+                      ng-change="updateChart()"
+                    />
+                  </td>
+                  <td>
+                    <input type="text" class="edit-input" ng-model="med.dose" />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      ng-click="removeMed($index)"
+                      style="
+                        background: none;
+                        border: none;
+                        color: var(--danger);
+                        cursor: pointer;
+                      "
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="flex: 1; min-width: 300px">
+            <div class="chart-box">
+              <p style="font-size: 0.8rem; margin-top: 0; opacity: 0.6">
+                Medication Reach & Concentration
+              </p>
+              <canvas id="riskReachChart"></canvas>
+            </div>
+          </div>
         </div>
 
-        <div class="glass-card" ng-show="step == 2">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0">Drug Inventory & Risk Analysis</h3>
-                <button type="button" class="btn btn-add" ng-click="addMed()">+ Add Medicine</button>
-            </div>
-            
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 300px;">
-                    <table>
-                        <thead>
-                            <tr><th>Name</th><th>Dosage</th><th style="width:30px"></th></tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="med in medications">
-                                <td><input type="text" class="edit-input" ng-model="med.name" ng-change="updateChart()"></td>
-                                <td><input type="text" class="edit-input" ng-model="med.dose"></td>
-                                <td><button type="button" ng-click="removeMed($index)" style="background:none; border:none; color:var(--danger); cursor:pointer">Remove</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="flex: 1; min-width: 300px;">
-                    <div class="chart-box">
-                        <p style="font-size: 0.8rem; margin-top: 0; opacity: 0.6;">Medication Reach & Concentration</p>
-                        <canvas id="riskReachChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div style="margin-top: 30px; display:flex; justify-content: space-between;">
-                <button type="button" class="btn btn-back" ng-click="step = 1">← Back</button>
-                <button type="button" class="btn btn-next" ng-click="step = 3">Confirm Review →</button>
-            </div>
+        <div
+          style="
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+          "
+        >
+          <button type="button" class="btn btn-back" ng-click="step = 1">
+            ← Back
+          </button>
+          <button type="button" class="btn btn-next" ng-click="step = 3">
+            Confirm Review →
+          </button>
         </div>
+      </div>
 
-        <div class="glass-card" ng-show="step == 3">
-            <div style="color: var(--success); font-size: 60px; margin-bottom: 15px;">Done!</div>
-            <h2>Prescription Validated!</h2>
-            <p style="opacity:0.8">Review complete. You can now proceed to see potential drug interactions.</p>
-            
-            <div style="margin-top: 30px; display:flex; justify-content: space-between;">
-                <button type="button" class="btn btn-back" ng-click="step = 2">← Back to Edit</button>
-                <button type="button" class="btn btn-done" ng-click="goToAnalysis()">Run Interaction Analysis </button>
-            </div>
+      <div class="glass-card" ng-show="step == 3">
+        <div
+          style="color: var(--success); font-size: 60px; margin-bottom: 15px"
+        >
+          Done!
         </div>
+        <h2>Prescription Validated!</h2>
+        <p style="opacity: 0.8">
+          Review complete. You can now proceed to see potential drug
+          interactions.
+        </p>
+
+        <div
+          style="
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+          "
+        >
+          <button type="button" class="btn btn-back" ng-click="step = 2">
+            ← Back to Edit
+          </button>
+          <button type="button" class="btn btn-done" ng-click="goToAnalysis()">
+            Run Interaction Analysis
+          </button>
+        </div>
+      </div>
     </div>
 
     <script>
-        const app = angular.module('patientApp', []);
+      const app = angular.module("patientApp", []);
 
-        app.controller('PatientCtrl', function($scope, $timeout) {
-            console.log("CONTROLLER LOADED");
-            
+      app.controller("PatientCtrl", function ($scope, $timeout) {
+        console.log("CONTROLLER LOADED");
 
-            // INITIAL STATE (DO NOT REMOVE)
-            $scope.step = 1;
-            $scope.medications = [];
-            let myChart = null;
-            console.log("INITIAL STATE:", $scope.medications);
-            // UPLOAD FUNCTION (CORE FIX)
-            $scope.moveNext = function() {
-                console.log("MOVING TO STEP 2");
+        // INITIAL STATE
+        $scope.step = 1;
+        $scope.medications = [];
+        let myChart = null;
+        console.log("INITIAL STATE:", $scope.medications);
+        // UPLOAD FUNCTION
+        $scope.moveNext = function () {
+          console.log("MOVING TO STEP 2");
 
-                window.addEventListener("beforeunload", function(e) {
-                    console.trace("PAGE IS UNLOADING HERE");
-                });
-    
-                const file = document.getElementById("fileInput").files[0];
+          window.addEventListener("beforeunload", function (e) {
+            console.trace("PAGE IS UNLOADING HERE");
+          });
 
-                if (!file) {
-                    alert("Please select a file");
-                    return;
-                }
+          const file = document.getElementById("fileInput").files[0];
 
-                const formData = new FormData();
-                formData.append("image", file);
+          if (!file) {
+            alert("Please select a file");
+            return;
+          }
 
-                fetch("http://localhost:5000/go/upload", {
-                    method: "POST",
-                    body: formData,
-                    credentials: "include"
-                })
-                .then(async function(res) {
-                    console.log("RAW RESPONSE:", res);
-                    var ct = res.headers.get("content-type") || "";
-                    var txt = await res.clone().text();
-                    var data;
-                    try {
-                        data = JSON.parse(txt);
-                    } catch (e) {
-                        throw e;
-                    }
-                    return data;
-                })
-                .then(data => {
-                    console.log("DATA:", data);
+          const formData = new FormData();
+          formData.append("image", file);
 
-                    if (!data || !data.prescriptionId) {
-                        console.log("INVALID RESPONSE");
-                        alert("Upload failed");
-                        return;
-                    }
+          fetch("http://localhost:5000/go/upload", {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          })
+            .then(async function (res) {
+              console.log("RAW RESPONSE:", res);
+              var ct = res.headers.get("content-type") || "";
+              var txt = await res.clone().text();
+              var data;
+              try {
+                data = JSON.parse(txt);
+              } catch (e) {
+                throw e;
+              }
+              return data;
+            })
+            .then((data) => {
+              console.log("DATA:", data);
 
-                    sessionStorage.setItem("prescriptionId", data.prescriptionId);
+              if (!data || !data.prescriptionId) {
+                console.log("INVALID RESPONSE");
+                alert("Upload failed");
+                return;
+              }
 
-                    $timeout(function() {
-                        $scope.medications = data.drugs.map(d => ({
-                            name: d,
-                            dose: "",
-                            val: Math.floor(Math.random() * 100)
-                        }));
-                        $scope.step = 2;
-                        console.log("STEP SET TO 2", $scope.step);
-                    });
-                })
-                .catch(err => {
-                    console.error("FETCH ERROR:", err);
-                    alert("Upload error" + err.message);
-                });
-            };
+              sessionStorage.setItem("prescriptionId", data.prescriptionId);
 
-            // KEEP YOUR EXISTING FUNCTIONS (UNCHANGED)
-            $scope.addMed = function() {
-                $scope.medications.push({ name: "", dose: "", val: 50 });
-                $timeout($scope.updateChart, 50);
-            };
+              $timeout(function () {
+                $scope.medications = data.drugs.map((d) => ({
+                  name: d,
+                  dose: "",
+                  val: Math.floor(Math.random() * 100),
+                }));
+                $scope.step = 2;
+                console.log("STEP SET TO 2", $scope.step);
+              });
+            })
+            .catch((err) => {
+              console.error("FETCH ERROR:", err);
+              alert("Upload error" + err.message);
+            });
+        };
 
-            $scope.removeMed = function(index) {
-                $scope.medications.splice(index, 1);
-                $timeout($scope.updateChart, 50);
-            };
+        $scope.addMed = function () {
+          $scope.medications.push({ name: "", dose: "", val: 50 });
+          $timeout($scope.updateChart, 50);
+        };
 
-            $scope.updateChart = function() {
-                const ctx = document.getElementById('riskReachChart');
-                if (!ctx) return;
+        $scope.removeMed = function (index) {
+          $scope.medications.splice(index, 1);
+          $timeout($scope.updateChart, 50);
+        };
 
-                const labels = $scope.medications.map(m => m.name);
-                const dataValues = $scope.medications.map(m => m.val || 50);
+        $scope.updateChart = function () {
+          const ctx = document.getElementById("riskReachChart");
+          if (!ctx) return;
 
-                if (myChart) myChart.destroy();
+          const labels = $scope.medications.map((m) => m.name);
+          const dataValues = $scope.medications.map((m) => m.val || 50);
 
-                myChart = new Chart(ctx, {
-                    type: 'radar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: dataValues
-                        }]
-                    }
-                });
-            };
+          if (myChart) myChart.destroy();
 
-            //  FINAL STEP (GO TO ANALYSIS)
-            $scope.goToAnalysis = function() {
-                const prescriptionId = sessionStorage.getItem("prescriptionId");
+          myChart = new Chart(ctx, {
+            type: "radar",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  data: dataValues,
+                },
+              ],
+            },
+          });
+        };
 
-                fetch("http://localhost:5000/go/save-drugs", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    credentials: "include",
-                    body: JSON.stringify({
-                        prescriptionId,
-                        drugs: $scope.medications
-                        .map(m => m.name)
-                        .filter(name => name && name.trim() !== "")
-                    })
-                })
-                .then(res => res.text())
-                .then(() => {
-                    console.log("SENDING:", {
-                        prescriptionId,
-                        drugs: $scope.medications.map(m => m.name)
-                    });
-                    console.log("Saved successfully");
-                    sessionStorage.setItem('medList', JSON.stringify($scope.medications));
-                    window.location.href = "patient_Interaction_Analyasis.html";
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("Failed to save drugs");
-                });
-            };
+        //  FINAL STEP (GO TO ANALYSIS)
+        $scope.goToAnalysis = function () {
+          const prescriptionId = sessionStorage.getItem("prescriptionId");
 
-            $scope.confirmExit = function() {
-                if (confirm("Exit back to Dashboard? Unsaved progress will be lost.")) {
-                    window.location.href = 'patient.html';
-                }
-            };
-        });
+          fetch("http://localhost:5000/go/save-drugs", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              prescriptionId,
+              drugs: $scope.medications
+                .map((m) => m.name)
+                .filter((name) => name && name.trim() !== ""),
+            }),
+          })
+            .then((res) => res.text())
+            .then(() => {
+              console.log("SENDING:", {
+                prescriptionId,
+                drugs: $scope.medications.map((m) => m.name),
+              });
+              console.log("Saved successfully");
+              sessionStorage.setItem(
+                "medList",
+                JSON.stringify($scope.medications),
+              );
+              window.location.href = "patient_Interaction_Analyasis.html";
+            })
+            .catch((err) => {
+              console.error(err);
+              alert("Failed to save drugs");
+            });
+        };
+
+        $scope.confirmExit = function () {
+          if (
+            confirm("Exit back to Dashboard? Unsaved progress will be lost.")
+          ) {
+            window.location.href = "patient.html";
+          }
+        };
+      });
     </script>
-</body>
+  </body>
 </html>

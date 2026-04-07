@@ -54,8 +54,7 @@
             </button>
         </div>
 
-        <!-- FIX: Show a clear message when there are no critical cases.
-             Old code showed nothing, which looks broken. -->
+        <!-- FIX: Show a clear message when there are no critical cases.-->
         <div class="empty-state" ng-if="criticalCases.length == 0">
             <div style="font-size: 2rem; margin-bottom: 15px;">✓</div>
             <h3 style="margin: 0;">No Critical Cases</h3>
@@ -75,9 +74,6 @@
             $scope.loading = true;
 
             $scope.loadCritical = function() {
-                // FIX: URL corrected from 'http://localhost:5000/api/doctor/all'
-                // to '/api/doctor/all' (relative URL). Using an absolute localhost URL
-                // breaks if the app is served from a different port or hostname.
                 $http.get('/api/doctor/all', {withCredentials: true})
                     .then(function(response) {
                         if (response.data.success) {
@@ -90,9 +86,6 @@
                                         patient:   item.name || item.patientName || 'Unknown Patient',
                                         condition: item.risk > 85 ? 'Severe Risk' : 'High Risk',
                                         vitals:    'Risk Score: ' + item.risk + '%',
-                                        // FIX: Use patientId for ward, falling back to a
-                                        // portion of the record ID. Old code used item.patientId
-                                        // which was undefined in the old schema.
                                         ward:      item.id || 'General Ward',
                                         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                     };
@@ -108,8 +101,6 @@
             };
 
             $scope.dispatch = function(a) {
-                // FIX: Replaced alert() with a proper in-page confirmation approach.
-                // alert() blocks the JS thread and looks unprofessional in a medical UI.
                 if (confirm("EMERGENCY RESPONSE: Dispatch medical team to " + a.ward + " for " + a.patient + "?")) {
                     console.log("Team dispatched for:", a.patient);
                     // In production: POST to a notifications endpoint here

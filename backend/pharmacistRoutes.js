@@ -21,7 +21,7 @@ function generatePairs(drugs) {
 
 module.exports = (Prescription) => {
 
-  /* ─────────────────────────────────────────
+  /* 
    * GET /pharmacist/queue
    * Returns all prescriptions pending review
    * ───────────────────────────────────────── */

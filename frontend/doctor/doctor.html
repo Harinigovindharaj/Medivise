@@ -1,244 +1,403 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" ng-app="doctorDashboard">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MediVise Pro | Doctor Dashboard</title>
-    
+
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
     <style>
-        :root {
-            --primary: #4facfe;
-            --accent: #00f2fe;
-            --critical: #ff4d4d;
-            --bg-dark: #0f172a;
-            --glass: rgba(15, 23, 42, 0.85); 
-            --border: rgba(255, 255, 255, 0.1);
-        }
+      :root {
+        --primary: #4facfe;
+        --accent: #00f2fe;
+        --critical: #ff4d4d;
+        --bg-dark: #0f172a;
+        --glass: rgba(15, 23, 42, 0.85);
+        --border: rgba(255, 255, 255, 0.1);
+      }
 
-        body {
-            margin: 0; 
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), 
-                        url('../assets/doctor-bg.png') no-repeat center center fixed;
-            background-size: cover;
-            color: white; display: flex; height: 100vh; overflow: hidden;
-        }
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)),
+          url("../assets/doctor.png") no-repeat center center fixed;
+        background-size: cover;
+        color: white;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
 
-        .sidebar { 
-            width: 280px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(25px); 
-            border-right: 1px solid var(--border); padding: 30px 20px;
-            display: flex; flex-direction: column;
-        }
+      .sidebar {
+        width: 280px;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(25px);
+        border-right: 1px solid var(--border);
+        padding: 30px 20px;
+        display: flex;
+        flex-direction: column;
+      }
 
-        .nav-link {
-            display: flex; align-items: center; padding: 14px 18px;
-            color: rgba(255,255,255,0.7); text-decoration: none;
-            border-radius: 12px; margin-bottom: 8px; transition: 0.3s;
-            font-weight: 500;
-        }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 14px 18px;
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        transition: 0.3s;
+        font-weight: 500;
+      }
 
-        .nav-link:hover { background: rgba(255,255,255,0.05); color: white; }
-        .nav-link.active { background: var(--primary); color: #0f172a; font-weight: 700; }
-        .nav-link.alert-link { color: var(--critical); border: 1px solid rgba(255, 77, 77, 0.2); }
+      .nav-link:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+      }
+      .nav-link.active {
+        background: var(--primary);
+        color: #0f172a;
+        font-weight: 700;
+      }
+      .nav-link.alert-link {
+        color: var(--critical);
+        border: 1px solid rgba(255, 77, 77, 0.2);
+      }
 
-        .main-viewport { flex: 1; padding: 40px; overflow-y: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
-        
-        .search-container {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-            border-radius: 12px; padding: 12px 20px; display: flex; align-items: center;
-            width: 400px; backdrop-filter: blur(10px);
-        }
-        .search-input {
-            background: transparent; border: none; color: white; outline: none;
-            width: 100%; font-size: 1rem; margin-left: 10px;
-        }
+      .main-viewport {
+        flex: 1;
+        padding: 40px;
+        overflow-y: auto;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+      }
 
-        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 25px; }
-        .card { 
-            background: var(--glass); border: 1px solid var(--border); 
-            border-radius: 20px; padding: 25px; backdrop-filter: blur(15px); 
-        }
-        .span-12 { grid-column: span 12; }
-        .span-4 { grid-column: span 4; }
+      .search-container {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        width: 400px;
+        backdrop-filter: blur(10px);
+      }
+      .search-input {
+        background: transparent;
+        border: none;
+        color: white;
+        outline: none;
+        width: 100%;
+        font-size: 1rem;
+        margin-left: 10px;
+      }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; opacity: 0.4; font-size: 0.8rem; text-transform: uppercase; padding: 15px; }
-        td { padding: 18px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 25px;
+      }
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 25px;
+        backdrop-filter: blur(15px);
+      }
+      .span-12 {
+        grid-column: span 12;
+      }
+      .span-4 {
+        grid-column: span 4;
+      }
 
-        .btn-action {
-            padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
-            background: rgba(255,255,255,0.05); color: white; cursor: pointer;
-            text-decoration: none; font-size: 0.85rem; transition: 0.2s;
-        }
-        .btn-action:hover { background: var(--primary); color: #0f172a; border-color: var(--primary); }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th {
+        text-align: left;
+        opacity: 0.4;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        padding: 15px;
+      }
+      td {
+        padding: 18px 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
 
-        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-        .status-critical { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; }
-        .status-stable { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
-        .status-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+      .btn-action {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 0.85rem;
+        transition: 0.2s;
+      }
+      .btn-action:hover {
+        background: var(--primary);
+        color: #0f172a;
+        border-color: var(--primary);
+      }
+
+      .status-pill {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .status-critical {
+        background: rgba(255, 77, 77, 0.2);
+        color: #ff4d4d;
+      }
+      .status-stable {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+      }
+      .status-pending {
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+      }
     </style>
-</head>
-<body ng-controller="DocCtrl">
-
+  </head>
+  <body ng-controller="DocCtrl">
     <nav class="sidebar">
-        <h2 style="font-weight: 800; color: var(--primary); margin-bottom: 40px;">✚ MediVise</h2>
-        
-        <div style="flex-grow: 1;">
-            <p style="font-size: 0.7rem; opacity: 0.5; font-weight: 700; margin-left: 15px; text-transform: uppercase;"></p>
-            <a href="doctor.html" class="nav-link active"> Dashboard</a>
-            <a href="doctor_alert.html" class="nav-link alert-link">Emergency Alerts</a>
-            <a href="docter_history.html" class="nav-link"> Medical History</a>
-            <a href="docter_prescription.html" class="nav-link"> New Prescription</a>
-        </div>
+      <h2 style="font-weight: 800; color: var(--primary); margin-bottom: 40px">
+        ✚ MediVise
+      </h2>
 
-        <div class="card" style="padding: 15px; font-size: 0.85rem; background: rgba(255,255,255,0.05);">
-            <small style="opacity: 0.5;">Logged in as:</small><br>
-            <strong>Dr. Alexander Pierce</strong>
-        </div>
-        <div class="card" style="padding: 15px; font-size: 0.85rem; background: rgba(255,255,255,0.05);" ng-click="logout()">
-            <small style="opacity: 0.5;">Logout</small><br>
-        </div>
+      <div style="flex-grow: 1">
+        <p
+          style="
+            font-size: 0.7rem;
+            opacity: 0.5;
+            font-weight: 700;
+            margin-left: 15px;
+            text-transform: uppercase;
+          "
+        ></p>
+        <a href="doctor.html" class="nav-link active"> Dashboard</a>
+        <a href="doctor_alert.html" class="nav-link alert-link"
+          >Emergency Alerts</a
+        >
+        <a href="docter_history.html" class="nav-link"> Medical History</a>
+        <a href="docter_prescription.html" class="nav-link">
+          New Prescription</a
+        >
+      </div>
+
+      <div
+        class="card"
+        style="
+          padding: 15px;
+          font-size: 0.85rem;
+          background: rgba(255, 255, 255, 0.05);
+        "
+      >
+        <small style="opacity: 0.5">Logged in as:</small><br />
+        <strong>Dr. Alexander Pierce</strong>
+      </div>
+      <div
+        class="card"
+        style="
+          padding: 15px;
+          font-size: 0.85rem;
+          background: rgba(255, 255, 255, 0.05);
+        "
+        ng-click="logout()"
+      >
+        <small style="opacity: 0.5">Logout</small><br />
+      </div>
     </nav>
 
     <main class="main-viewport">
-        <div class="header">
-            <div>
-                <h1 style="margin: 0; font-weight: 700;">Doctor Dashboard</h1>
-                <p style="margin: 5px 0 0 0; opacity: 0.6;">Welcome back. You have {{patients.length}} patients under care.</p>
-            </div>
-            
-            <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search patients..." ng-model="searchQuery">
-            </div>
+      <div class="header">
+        <div>
+          <h1 style="margin: 0; font-weight: 700">Doctor Dashboard</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.6">
+            Welcome back. You have {{patients.length}} patients under care.
+          </p>
         </div>
 
-        <div class="grid">
-            <div class="card span-12">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0;">Active Patient List</h3>
-                    <button class="btn-action" ng-click="resetDemo()">Reset Demo Data</button>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Patient Information</th>
-                            <th>Status</th>
-                            <th>Current Risk</th>
-                            <th>Last Activity</th>
-                            <th>Quick Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr ng-repeat="p in patients | filter:searchQuery as filtered">
-                            <td>
-                                <div style="font-weight: 600;">{{p.name}}</div>
-                                <div style="font-size: 0.8rem; opacity: 0.5;">{{p.id}} • {{p.age}} yrs</div>
-                            </td>
-                            <td>
-                                <span class="status-pill" ng-class="'status-' + p.status.toLowerCase()">
-                                    {{p.status}}
-                                </span>
-                            </td>
-                            <td style="font-weight: 700; font-family: monospace;" ng-style="{'color': getRiskColor(p.risk)}">
-                                {{p.risk}}% <span ng-if="p.risk > 70"></span>
-                            </td>
-                            <td style="font-size: 0.85rem; opacity: 0.7;">
-                                {{p.lastAction || 'No recent activity'}}
-                            </td>
-                            <td>
-                                <div style="display: flex; gap: 10px;">
-                                    <a href="docter_history.html" class="btn-action">Records</a>
-                                    <button ng-click="startPrescription(p)" class="btn-action" style="background: var(--primary); color: #0f172a;">+ New Rx</button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card span-4">
-                <h4>System Status</h4>
-                <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">ACTIVE</div>
-                <p style="margin:0; opacity: 0.5;">HIS Integration Online</p>
-            </div>
-            <div class="card span-4">
-                <h4>Total Prescriptions</h4>
-                <div style="font-size: 2rem; font-weight: 700; color: var(--accent);">{{totalRx}}</div>
-                <p style="margin:0; opacity: 0.5;">Transmitted this session</p>
-            </div>
-            <div class="card span-4">
-                <h4>High Risk Cases</h4>
-                <div style="font-size: 2rem; font-weight: 700; color: var(--critical);">{{ (patients | filter:{status:'Critical'}).length }}</div>
-                <p style="margin:0; opacity: 0.5;">Requiring Immediate Review</p>
-            </div>
+        <div class="search-container">
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search patients..."
+            ng-model="searchQuery"
+          />
         </div>
+      </div>
+
+      <div class="grid">
+        <div class="card span-12">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <h3 style="margin: 0">Active Patient List</h3>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Patient Information</th>
+                <th>Status</th>
+                <th>Current Risk</th>
+                <th>Last Activity</th>
+                <th>Quick Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="p in patients | filter:searchQuery as filtered">
+                <td>
+                  <div style="font-weight: 600">{{p.name}}</div>
+                  <div style="font-size: 0.8rem; opacity: 0.5">
+                    {{p.id}} • {{p.age}} yrs
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="status-pill"
+                    ng-class="'status-' + p.status.toLowerCase()"
+                  >
+                    {{p.status}}
+                  </span>
+                </td>
+                <td
+                  style="font-weight: 700; font-family: monospace"
+                  ng-style="{'color': getRiskColor(p.risk)}"
+                >
+                  {{p.risk}}% <span ng-if="p.risk > 70"></span>
+                </td>
+                <td style="font-size: 0.85rem; opacity: 0.7">
+                  {{p.lastAction || 'No recent activity'}}
+                </td>
+                <td>
+                  <div style="display: flex; gap: 10px">
+                    <a href="docter_history.html" class="btn-action">Records</a>
+                    <button
+                      ng-click="startPrescription(p)"
+                      class="btn-action"
+                      style="background: var(--primary); color: #0f172a"
+                    >
+                      + New Rx
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card span-4">
+          <h4>System Status</h4>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--primary)">
+            ACTIVE
+          </div>
+          <p style="margin: 0; opacity: 0.5">HIS Integration Online</p>
+        </div>
+        <div class="card span-4">
+          <h4>Total Prescriptions</h4>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--accent)">
+            {{totalRx}}
+          </div>
+          <p style="margin: 0; opacity: 0.5">Transmitted this session</p>
+        </div>
+        <div class="card span-4">
+          <h4>High Risk Cases</h4>
+          <div
+            style="font-size: 2rem; font-weight: 700; color: var(--critical)"
+          >
+            {{ (patients | filter:{status:'Critical'}).length }}
+          </div>
+          <p style="margin: 0; opacity: 0.5">Requiring Immediate Review</p>
+        </div>
+      </div>
     </main>
 
     <script>
-        const app = angular.module('doctorDashboard', []);
+      const app = angular.module("doctorDashboard", []);
 
-        // This allows the frontend to send session cookies to your Express backend
-        app.config(['$httpProvider', function($httpProvider) {
-            $httpProvider.defaults.withCredentials = true;
-        }]);
+      // This allows the frontend to send session cookies to your Express backend
+      app.config([
+        "$httpProvider",
+        function ($httpProvider) {
+          $httpProvider.defaults.withCredentials = true;
+        },
+      ]);
 
-        app.controller('DocCtrl', function($scope, $window, $http) {
-            $scope.patients = [];
-            $scope.totalRx = 0;
+      app.controller("DocCtrl", function ($scope, $window, $http) {
+        $scope.patients = [];
+        $scope.totalRx = 0;
 
-            // 1. CONNECT TO BACKEND: Fetch all prescriptions/patients
-            $scope.init = function() {
-                // Calling the router.get("/all") route from your Express code
-                $http.get('/api/doctor/all', {withCredentials: true}) 
-                    .then(function(response) {
-                        if (response.data.success) {
-                            // Map backend data to your table
-                            $scope.patients = response.data.data; 
-                            $scope.totalRx = response.data.count;
-                        }
-                    }, function(error) {
-                        console.error("Backend Connection Failed:", error);
-                        // Fallback to empty list if server is not running
-                        $scope.patients = [];
-                    });
-            };
-            $scope.logout = function () {
-                fetch("/go/logout", { credentials: "include" })
-                    .then(() => {
-                        console.log("Logged out successfully");
-                        window.location.href = "/index.html";
-                        console.log("Redirected to index.html");
-                    });
-            }
+        // 1. CONNECT TO BACKEND: Fetch all prescriptions/patients
+        $scope.init = function () {
+          // Calling the router.get("/all") route from your Express code
+          $http.get("/api/doctor/all", { withCredentials: true }).then(
+            function (response) {
+              if (response.data.success) {
+                // Map backend data to your table
+                $scope.patients = response.data.data;
+                $scope.totalRx = response.data.count;
+              }
+            },
+            function (error) {
+              console.error("Backend Connection Failed:", error);
+              // Fallback to empty list if server is not running
+              $scope.patients = [];
+            },
+          );
+        };
+        $scope.logout = function () {
+          fetch("/go/logout", { credentials: "include" }).then(() => {
+            console.log("Logged out successfully");
+            window.location.href = "/index.html";
+            console.log("Redirected to index.html");
+          });
+        };
 
-            // 2. START PRESCRIPTION: Bridge to the next page
-            $scope.startPrescription = function(patient) {
-                // We save to localStorage ONLY to tell the next page which patient was picked
-                localStorage.setItem('current_patient', JSON.stringify(patient));
-                $window.location.href = 'docter_prescription.html';
-            };
+        // 2. START PRESCRIPTION: Bridge to the next page
+        $scope.startPrescription = function (patient) {
+          // We save to localStorage ONLY to tell the next page which patient was picked
+          localStorage.setItem("current_patient", JSON.stringify(patient));
+          $window.location.href = "docter_prescription.html";
+        };
 
-            // 3. UI HELPERS (Unchanged logic)
-            $scope.getRiskColor = function(risk) {
-                if (!risk || risk < 30) return '#2ecc71';
-                if (risk > 70) return '#ff4d4d';
-                return '#f59e0b';
-            };
+        // 3. UI HELPERS (Unchanged logic)
+        $scope.getRiskColor = function (risk) {
+          if (!risk || risk < 30) return "#2ecc71";
+          if (risk > 70) return "#ff4d4d";
+          return "#f59e0b";
+        };
 
-            $scope.resetDemo = function() {
-                // In a real backend, you'd call a 'delete' route, 
-                // but for now, we just refresh the view
-                $scope.init();
-            };
+        $scope.resetDemo = function () {
+          // In a real backend, you'd call a 'delete' route,
+          // but for now, we just refresh the view
+          $scope.init();
+        };
 
-            // Initialize on load
-            $scope.init();
-        });
+        // Initialize on load
+        $scope.init();
+      });
     </script>
-</body>
+  </body>
 </html>

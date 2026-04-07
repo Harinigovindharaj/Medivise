@@ -48,7 +48,7 @@ router.post("/signup", async (req, res) => {
 
   const hashed = await bcrypt.hash(password, 10);
 
-  const user = new User({ email, password: hashed, role });
+  const user = new User({ email, password: hashed, role: role.toLowerCase() });
   await user.save();
 
   res.send("User registered");
@@ -56,10 +56,15 @@ router.post("/signup", async (req, res) => {
 
 // Login
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body; // include role
 
   const user = await User.findOne({ email });
   if (!user) return res.send("User not found");
+
+  // check role match
+  if (user.role !== role.toLowerCase()) {
+    return res.status(403).send("Invalid role selected");
+  }
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.send("Wrong password");
@@ -67,14 +72,10 @@ router.post("/login", async (req, res) => {
   req.session.userId = user._id;
   req.session.role = user.role;
 
-  let redirectUrl = "";
-
-  redirectUrl = `/${user.role}/${user.role}.html`;
-
   res.json({
     message: "Logged in",
     role: user.role,
-    redirect: redirectUrl
+    redirect: `/${user.role}/${user.role}.html`
   });
 });
 

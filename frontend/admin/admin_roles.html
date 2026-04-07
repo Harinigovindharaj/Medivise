@@ -1,80 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8"><title>MediVise | Role Management</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>MediVise | Role Management</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        :root { --sidebar-bg: #0f172a; --accent: #38bdf8; --card-bg: rgba(15, 23, 42, 0.85); --border: rgba(255, 255, 255, 0.1); --text-muted: #94a3b8; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)), url('../assets/research-bg.png') no-repeat center center fixed; background-size: cover; color: #f1f5f9; display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 25px; border-right: 1px solid var(--border); backdrop-filter: blur(10px); position: fixed; height: 100vh; }
-        .nav-back { padding: 12px 15px; border-radius: 8px; display: block; text-decoration: none; color: var(--accent); border: 1px solid var(--accent); text-align: center; font-weight: bold; }
-        .main-content { flex: 1; margin-left: 310px; padding: 40px; }
-        
-        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .btn-add { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; }
-        
-        table { width: 100%; background: var(--card-bg); border-radius: 12px; border-collapse: collapse; overflow: hidden; border: 1px solid var(--border); }
-        th { text-align: left; padding: 15px; color: var(--accent); border-bottom: 2px solid var(--border); font-size: 12px; text-transform: uppercase; }
-        td { padding: 15px; border-bottom: 1px solid var(--border); }
-        
-        .btn-edit { color: var(--accent); background: none; border: 1px solid var(--accent); padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        .btn-delete { color: #ef4444; background: none; border: 1px solid #ef4444; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .btn-edit:hover { background: var(--accent); color: #000; }
-        .btn-delete:hover { background: #ef4444; color: #fff; }
+      :root {
+        --sidebar-bg: #0f172a;
+        --accent: #38bdf8;
+        --card-bg: rgba(15, 23, 42, 0.85);
+        --border: rgba(255, 255, 255, 0.1);
+        --text-muted: #94a3b8;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background:
+          linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)),
+          url("../assets/research-bg.png") no-repeat center center fixed;
+        background-size: cover;
+        color: #f1f5f9;
+        display: flex;
+        min-height: 100vh;
+      }
+      .sidebar {
+        width: 260px;
+        background: var(--sidebar-bg);
+        padding: 25px;
+        border-right: 1px solid var(--border);
+        backdrop-filter: blur(10px);
+        position: fixed;
+        height: 100vh;
+      }
+      .nav-back {
+        padding: 12px 15px;
+        border-radius: 8px;
+        display: block;
+        text-decoration: none;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        text-align: center;
+        font-weight: bold;
+      }
+      .main-content {
+        flex: 1;
+        margin-left: 310px;
+        padding: 40px;
+      }
+
+      .action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+      }
+      .btn-add {
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      table {
+        width: 100%;
+        background: var(--card-bg);
+        border-radius: 12px;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+      th {
+        text-align: left;
+        padding: 15px;
+        color: var(--accent);
+        border-bottom: 2px solid var(--border);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      td {
+        padding: 15px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .btn-edit {
+        color: var(--accent);
+        background: none;
+        border: 1px solid var(--accent);
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 5px;
+      }
+      .btn-delete {
+        color: #ef4444;
+        background: none;
+        border: 1px solid #ef4444;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn-edit:hover {
+        background: var(--accent);
+        color: #000;
+      }
+      .btn-delete:hover {
+        background: #ef4444;
+        color: #fff;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <aside class="sidebar">
-        <h2 style="color: var(--accent);">MediVise</h2>
-        <nav>
-            <a href="admin.html" class="nav-back">← Back to Dashboard</a>
-            <p style="margin-top:40px; color:var(--text-muted); font-size:11px; text-transform:uppercase;">Access Control</p>
-        </nav>
+      <h2 style="color: var(--accent)">MediVise</h2>
+      <nav>
+        <a href="admin.html" class="nav-back">← Back to Dashboard</a>
+        <p
+          style="
+            margin-top: 40px;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+          "
+        >
+          Access Control
+        </p>
+      </nav>
     </aside>
 
     <main class="main-content">
-        <div class="action-bar">
-            <h1>Role Permissions</h1>
-            <button class="btn-add" id="addRoleBtn">+ Create New Role</button>
-        </div>
+      <div class="action-bar">
+        <h1>Role Permissions</h1>
+        <button class="btn-add" id="addRoleBtn">+ Create New Role</button>
+      </div>
 
-        <table id="roleTable">
-            <thead>
-                <tr><th>Role Name</th><th>Drug Access</th><th>Audit Access</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>Pharmacist</strong></td>
-                    <td>Read/Write</td>
-                    <td>No</td>
-                    <td>
-                        <button class="btn-edit">Edit</button>
-                        <button class="btn-delete">Remove</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>Ward Nurse</strong></td>
-                    <td>Read Only</td>
-                    <td>No</td>
-                    <td>
-                        <button class="btn-edit">Edit</button>
-                        <button class="btn-delete">Remove</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+      <table id="roleTable">
+        <thead>
+          <tr>
+            <th>Role Name</th>
+            <th>Drug Access</th>
+            <th>Audit Access</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pharmacist</strong></td>
+            <td>Read/Write</td>
+            <td>No</td>
+            <td>
+              <button class="btn-edit">Edit</button>
+              <button class="btn-delete">Remove</button>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Ward Nurse</strong></td>
+            <td>Read Only</td>
+            <td>No</td>
+            <td>
+              <button class="btn-edit">Edit</button>
+              <button class="btn-delete">Remove</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </main>
 
     <script>
-        $(document).ready(function () {
-            function loadUsers() {
-                $.get("http://localhost:5000/go/admin/users", function(users) {
+      $(document).ready(function () {
+        function loadUsers() {
+          $.get("http://localhost:5000/go/admin/users", function (users) {
+            $("#roleTable tbody").empty();
 
-                    $('#roleTable tbody').empty();
-
-                    users.forEach(u => {
-                        $('#roleTable tbody').append(`
+            users.forEach((u) => {
+              $("#roleTable tbody").append(`
                             <tr>
                                 <td><strong>${u.email}</strong></td>
                                 <td>${u.role}</td>
@@ -85,34 +190,36 @@
                                 </td>
                             </tr>
                         `);
-                    });
-                });
-            }
+            });
+          });
+        }
 
-            loadUsers();
+        loadUsers();
 
-            window.deleteUser = function(id) {
-                if (!confirm("Delete user?")) return;
+        window.deleteUser = function (id) {
+          if (!confirm("Delete user?")) return;
 
-                $.ajax({
-                    url: `http://localhost:5000/go/admin/users/${id}`,
-                    type: "DELETE",
-                    success: loadUsers
-                });
-            };
+          $.ajax({
+            url: `http://localhost:5000/go/admin/users/${id}`,
+            type: "DELETE",
+            success: loadUsers,
+          });
+        };
 
-            window.changeRole = function(id) {
-                const newRole = prompt("Enter new role (admin/patient/pharmacist/etc)");
+        window.changeRole = function (id) {
+          const newRole = prompt(
+            "Enter new role (admin/patient/pharmacist/etc)",
+          );
 
-                $.ajax({
-                    url: "http://localhost:5000/go/admin/users/role",
-                    type: "PUT",
-                    contentType: "application/json",
-                    data: JSON.stringify({ userId: id, role: newRole }),
-                    success: loadUsers
-                });
-            };
-        });
+          $.ajax({
+            url: "http://localhost:5000/go/admin/users/role",
+            type: "PUT",
+            contentType: "application/json",
+            data: JSON.stringify({ userId: id, role: newRole }),
+            success: loadUsers,
+          });
+        };
+      });
     </script>
-</body>
+  </body>
 </html>

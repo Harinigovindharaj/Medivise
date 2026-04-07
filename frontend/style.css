@@ -9,21 +9,17 @@ body, html {
     overflow: hidden; 
 }
 
-
-/* Update these lines in your style.css */
-
 .med-bg {
-    /* Ensure this matches your default background exactly */
+
     background: #0a192f url('assets/med-bg.png') no-repeat center center fixed;
     background-size: cover;
 }
 
-/* Match the exact extensions shown in your img folder */
-.bg-patient    { background-image: url('assets/patient-bg.png') !important; }
-.bg-doctor     { background-image: url('asstes/doctor-bg.png') !important; }
-.bg-pharmacist { background-image: url('assets/pharmacist-bg.png') !important; }
-.bg-researcher { background-image: url('assets/research-bg.png') !important; } /* Check if this is .jpg or .png */
-.bg-admin      { background-image: url('assets/admin-bg.png') !important; }
+.bg-patient    { background-image: url('/assets/patient-bg.png') !important; }
+.bg-doctor     { background-image: url('/assets/doctor.png') !important; }
+.bg-pharmacist { background-image: url('/assets/pharmacist-bg.png') !important; }
+.bg-researcher { background-image: url('/assets/research-bg.png') !important; } 
+.bg-admin      { background-image: url('/assets/admin-bg.png') !important; }
 .overlay {
     background: radial-gradient(circle, rgba(10, 40, 70, 0.2) 0%, rgba(10, 20, 30, 0.7) 100%);
     height: 100%; 

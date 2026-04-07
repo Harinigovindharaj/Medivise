@@ -1,7 +1,5 @@
 const express = require("express");
 
-// FIX: Now receives both Prescription AND User models.
-// User is needed for the new /patients route (docter_history.html).
 module.exports = (Prescription, User) => {
   const router = express.Router();
 
@@ -17,20 +15,7 @@ module.exports = (Prescription, User) => {
     res.json({ success: true, message: "Doctor dashboard loaded" });
   });
 
-  // ─────────────────────────────────────────────────────────────
-  // FIX: /create now handles two different call shapes:
-  //
-  //   Shape A — from docter_prescription.html (runValidation):
-  //     { drugs: [{name, dose, freq}, ...] }
-  //     Only drugs are sent here. Patient data isn't saved yet.
-  //
-  //   Shape B — from doctor_risk_report.html (finish/final approval):
-  //     { patientName, patientAge, patientId, name, dose, freq, risk, status }
-  //     The full record including patient identity and risk score.
-  //
-  // Old code only read `drugs` and expected [String], so Shape A saved
-  // objects as strings ("[object Object]") and Shape B saved nothing useful.
-  // ─────────────────────────────────────────────────────────────
+
   router.post("/create", isDoctor, async (req, res) => {
     try {
       const {
@@ -67,12 +52,7 @@ module.exports = (Prescription, User) => {
     }
   });
 
-  // ─────────────────────────────────────────────────────────────
-  // FIX: /all now maps DB fields to what doctor.html's table expects.
-  // Old code returned raw Prescription documents which have no name/id/age/risk
-  // at the top level — those fields were added to the schema in server.js.
-  // doctor_alert.html also uses this route and filters on item.status and item.risk.
-  // ─────────────────────────────────────────────────────────────
+
   router.get("/all", isDoctor, async (req, res) => {
     try {
       const prescriptions = await Prescription.find().sort({ createdAt: -1 });
@@ -90,7 +70,6 @@ module.exports = (Prescription, User) => {
           lastAction: p.createdAt
             ? new Date(p.createdAt).toLocaleDateString()
             : "No activity",
-          // Keep raw fields so docter_history.html filteredHistory works too
           userId:    p.userId,
           drugs:     p.drugs
         }))
@@ -110,13 +89,7 @@ module.exports = (Prescription, User) => {
     }
   });
 
-  // ─────────────────────────────────────────────────────────────
-  // FIX: New /patients route required by docter_history.html.
-  // The old code had no such route, so the patient list panel was always empty.
-  // We build a deduplicated patient list from prescriptions (since there is no
-  // separate Patient collection), using patientId as the unique key.
-  // Falls back to User collection query if prescriptions have no patientId stored.
-  // ─────────────────────────────────────────────────────────────
+
   router.get("/patients", isDoctor, async (req, res) => {
     try {
       const prescriptions = await Prescription.find(
